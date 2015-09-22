@@ -69,7 +69,7 @@ void parseRequest(char * buffer) {
 	if(strstr(buffer, "GET") != NULL) {
 		sendPage();
 	} else {
-		write(conn.client_socket, HTTP_NOT_IMPL, HTTP_NOT_IMPL_LEN);
+		write(conn.client_socket, HTTP_NOT_IMPL, strlen(HTTP_NOT_IMPL));
 	}
 }
 
@@ -108,6 +108,7 @@ void sendPage() {
 	free(body);
 	free(response);
 }
+
 void readConf() {
 
 	FILE *file;
@@ -115,15 +116,11 @@ void readConf() {
 	char buff[128];
 
 	file = fopen("./test.config", "rt");
-	if(file != NULL) {
-		
-		printf("Reading file....\n");	
+	if(file != NULL) {	
 		while(fgets(line, 128, file) != NULL) {
 			sscanf(line, "%[^\n]", buff);
-			
 			if(strstr(buff, "PORT") != NULL) {
 				conn.address.sin_port = htons(parsePort(buff));
-				printf("Port was set for the server\n");
 			}else if(strstr(buff, "DIR") != NULL) {
 				parseDir(buff);	
 			}
@@ -151,6 +148,9 @@ char* parseDir(char arr[]) {
 	char * dir;
 
 	dir = strstr(arr, "/");
-	printf("%s\n", dir);
-	return(dir);
+
+	if(dir != NULL) {
+		return(dir);
+	}
+	return 0;
 }

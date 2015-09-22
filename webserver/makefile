@@ -1,4 +1,4 @@
-CC=gcc
+lsCC=gcc
 HDRS=./include
 SRC=./src
 OBJ=./objects

@@ -11,9 +11,7 @@
 #include <string.h>
 
 #define HTTP_OK "HTTP/1.0 200 OK\n"
-#define HTTP_OK_LEN 16
 #define HTTP_NOT_IMPL "HTTP/1.0 501 Not implemented\n"
-#define HTTP_NOT_IMPL_LEN 29
 #define HEADER_CONT_TYPE "Content-Type: text/html\n"
 #define HEADER_LANG "Content-Language: en\n"
 #define NEWLINE "\n"

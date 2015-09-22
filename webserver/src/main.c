@@ -3,7 +3,7 @@
 
 void cleanup(int sig) {
 
-	printf("Starting cleanup\n");
+	printf("\n\nStarting cleanup\n");
 	printf("Closing sockets\n");
 
 	shutdown(conn.client_socket, 2);
