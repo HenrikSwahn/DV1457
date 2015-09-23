@@ -1,7 +1,7 @@
 #include <signal.h>
 #include "../include/server.h"
 
-void cleanup(int sig) {
+/*void cleanup(int sig) {
 
 	printf("\n\nStarting cleanup\n");
 	printf("Closing sockets\n");
@@ -15,11 +15,11 @@ void cleanup(int sig) {
 	free(conn.buffer);
 	printf("Released memory hold by buffer\n");
 	exit(0);
-}
+}*/
 
 int main() {
 
-	signal(SIGINT, cleanup);
+//	signal(SIGINT, cleanup);
 
 	create_server();
 	run_server();

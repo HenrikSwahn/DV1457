@@ -17,16 +17,19 @@
 #define NEWLINE "\n"
 
 typedef struct {
-
-	int server_socket;
-	int client_socket;
-	int buffsize;
-	char *buffer;
+	int sock;
+	//int client_socket;
+	//int buffsize;
+	//char *buffer;
 	struct sockaddr_in address;	
 	socklen_t addrlen;
-} Conn;
+} Server;
 
-Conn conn;
+typedef struct {
+	int sock;
+	int buffsize;
+	char *buffer;	
+} Client;
 
 int create_server(); 
 int run_server();
@@ -36,4 +39,5 @@ void readConf();
 int parsePort(char arr[]);
 char* parseDir(char arr[]);
 void sendPage();
+
 #endif
