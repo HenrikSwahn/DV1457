@@ -1,84 +1,107 @@
 #include "../include/server.h"
 #include "../include/error.h"
 
-Server server;
-Client client;
+Conf conf;
 
-//Creates the socket and binds in to an address
-int create_server() {
+int handle_connection(int filedesc) {
 	
-	readConf();	
-	//conn.buffsize = 1024;
-	//conn.buffer = malloc(conn.buffsize);	
-		
-	//Create the socket
-	if ((server.sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		_error(SCREATE_ERROR);
-	}
+	char buffer[512];
+	int nbytes;
 	
-	printf("Socket was created successfully\n");
-
-	server.address.sin_family = AF_INET;
-	server.address.sin_addr.s_addr = INADDR_ANY;
-
-	//Bind the socket to an address
-	if (bind(server.sock, (struct sockaddr *) &server.address, sizeof(server.address)) <  0) {
-		_error(SBIND_ERROR);
+	nbytes = read(filedesc, buffer, 512);
+	
+	if(nbytes < 0) {
+		perror("read error");
+		exit(EXIT_FAILURE);
+	}	
+	else {
+		parse_request(filedesc, buffer);
+		return 1;	
 	}
-
-	printf("Socket was bound successfully\n");
-	return 0;
 }
 
-//Starts to listen on the socket and accepting if anyone tries to connect
-int run_server() {
+int create_server(uint16_t port) {
+
+	conf = readConf();
+
+	int sock;
+	struct sockaddr_in server;
+
+	if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		perror("Error creating sock");
+		exit(EXIT_FAILURE);
+	}
+
+	server.sin_family = AF_INET;
+	server.sin_port = htons(conf.port);
+	server.sin_addr.s_addr = htonl(INADDR_ANY);
 	
-	client.buffsize = 1024;
-	client.buffer = malloc(client.buffsize);	
-	while(1) {
-		//Start to listen, max queue 10
-		if (listen(server.sock, 10) < 0) {
-			_error(SLISTEN_ERROR);
+	if(bind(sock, (struct sockaddr *) &server, sizeof(server)) < 0) {
+		perror("Error binding socket");
+		exit(EXIT_FAILURE);
+	}
+	return sock;
+}
+
+void run_server() {
+		
+	int server_sock, index;
+	fd_set active_fd_set, read_fd_set;
+	struct sockaddr_in client;
+	socklen_t sock_len;
+	server_sock = create_server(PORT);
+	
+	if(listen(server_sock, 10000) < 0) {
+		perror("Error listening");
+		exit(EXIT_FAILURE);
+	}
+
+	FD_ZERO (&active_fd_set);
+	FD_SET (server_sock, &active_fd_set);
+	
+	while(1) { 				
+		read_fd_set = active_fd_set;
+		if(select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0) {
+			perror("select error");
+			exit(EXIT_FAILURE);
 		}
-		
-		//Accepts if a connection is made
-		if ((client.sock = accept(server.sock, (struct sockaddr *) &server.address, &server.addrlen)) < 0) {
-			_error(SACCEPT_ERROR);
-		}	
-		
-		//Checks if the client is connected
-		if (client.sock > 0) {
-			printf("Client is connected\n");
+		// Service sockets with input 
+		for(index = 0; index < FD_SETSIZE; index++) {
+			if(FD_ISSET(index, &read_fd_set)) {
+				if(index == server_sock) {
+					int new_con;
+					sock_len = sizeof(client);
+					new_con = accept(server_sock, (struct sockaddr *) &client, &sock_len);
+					if(new_con < 0) {
+						perror("Error accepting new con");
+						exit(EXIT_FAILURE);
+					}
+					fprintf(stderr, "Server: Connection from host: %hd, port: %hd. \n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
+					FD_SET(new_con, &active_fd_set);
+				}
+				else {
+					// Data on an already connected socket 
+					if(handle_connection(index)) {
+						close(index);
+						FD_CLR(index, &active_fd_set);
+					}
+				}
+			}
 		}
-		
-		//Recieve data from the client
-		recv(client.sock, client.buffer, client.buffsize, 0);
-		printf("%s\n", client.buffer);
-		
-		//Parse incomming request
-		parseRequest(client.buffer);
-		
-		//Close the client socket
-		close(client.sock);
 	}
 }
 
-int close_server() {
-	close(server.sock);
-	return 0;
-}
-
-void parseRequest(char * buffer) {
+void parse_request(int socket, char * buffer) {
 	
 	//If GET request
 	if(strstr(buffer, "GET") != NULL) {
-		sendPage();
+		sendPage(socket);
 	} else {
-		write(client.sock, HTTP_NOT_IMPL, strlen(HTTP_NOT_IMPL));
+		write(socket, HTTP_NOT_IMPL, strlen(HTTP_NOT_IMPL));
 	}
 }
 
-void sendPage() {
+void sendPage(int filedesc) {
 
 	FILE *file = fopen("../www/index.html", "rt");
 	char * body;
@@ -96,7 +119,7 @@ void sendPage() {
 	size_t len = strlen(HTTP_OK) +
 		strlen(HEADER_CONT_TYPE) +
 		strlen(HEADER_LANG) +
-		strlen(NEWLINE) +  
+		strlen("\n") +  
 		bodyLen;
 	
 	response = malloc(len);
@@ -104,18 +127,19 @@ void sendPage() {
 	strcat(response, HTTP_OK);
 	strcat(response, HEADER_LANG);
 	strcat(response, HEADER_CONT_TYPE);
-	strcat(response, NEWLINE);
+	strcat(response, "\n");
 	strcat(response, body);
 	
 	response[len] = '\0';
-	write(client.sock, response, len); 
+	write(filedesc, response, len); 
 
 	free(body);
 	free(response);
 }
 
-void readConf() {
-
+Conf readConf() {
+	
+	Conf c;
 	FILE *file;
 	char line[128];
 	char buff[128];
@@ -125,15 +149,16 @@ void readConf() {
 		while(fgets(line, 128, file) != NULL) {
 			sscanf(line, "%[^\n]", buff);
 			if(strstr(buff, "PORT") != NULL) {
-				server.address.sin_port = htons(parsePort(buff));
+				c.port = parsePort(buff);
 			}else if(strstr(buff, "DIR") != NULL) {
-				parseDir(buff);	
+				c.path=parseDir(buff);	
 			}
 		}
 	}
 	else {
 		printf("ERROR");
 	} 
+	return c;
 }
 
 int parsePort(char arr[]) {
@@ -143,7 +168,7 @@ int parsePort(char arr[]) {
 	
 	if(port ==  -1) {
 		printf("No port specified, setting to defulat, 12000");
-		port = 12000;
+		port = PORT;
 	}
 	return port;
 }

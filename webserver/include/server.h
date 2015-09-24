@@ -9,35 +9,29 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
+#include <netdb.h>
 
 #define HTTP_OK "HTTP/1.0 200 OK\n"
 #define HTTP_NOT_IMPL "HTTP/1.0 501 Not implemented\n"
 #define HEADER_CONT_TYPE "Content-Type: text/html\n"
 #define HEADER_LANG "Content-Language: en\n"
-#define NEWLINE "\n"
+#define PORT 12000
+#define MAXQ 10000
 
 typedef struct {
-	int sock;
-	//int client_socket;
-	//int buffsize;
-	//char *buffer;
-	struct sockaddr_in address;	
-	socklen_t addrlen;
-} Server;
+	uint16_t port;
+	char* path;
+	char* concurrency;
+} Conf;
 
-typedef struct {
-	int sock;
-	int buffsize;
-	char *buffer;	
-} Client;
-
-int create_server(); 
-int run_server();
-void parseRequest(char * buffer);
-int close_server();
-void readConf();
-int parsePort(char arr[]);
-char* parseDir(char arr[]);
-void sendPage();
+void run_server();
+void parse_request(int, char*);
+Conf readConf();
+int parsePort(char a[]);
+char* parseDir(char a[]);
+void sendPage(int);
+int create_server(uint16_t);
+int handle_connection(int);
 
 #endif

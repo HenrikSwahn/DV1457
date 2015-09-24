@@ -18,12 +18,8 @@
 }*/
 
 int main() {
-
-//	signal(SIGINT, cleanup);
-
-	create_server();
-	run_server();
-	close_server();
+	
+ 	run_server();
 	return 0;
 }
 
