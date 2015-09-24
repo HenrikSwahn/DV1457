@@ -11,6 +11,7 @@
 #include <string.h>
 #include <errno.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 
 #define HTTP_OK "HTTP/1.0 200 OK\n"
 #define HTTP_NOT_IMPL "HTTP/1.0 501 Not implemented\n"

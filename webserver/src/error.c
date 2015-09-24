@@ -19,21 +19,26 @@ void _error(int error) {
 }
 
 void _socket_accept_error() {
-	printf("Error, accepting\n");
+	perror("creating");
 	exit(EXIT_FAILURE);
 }
 
 void _socket_bind_error() {
-	printf("Error binding socket\n");
+	perror("binding");
 	exit(EXIT_FAILURE);
 } 
 
 void _socket_listen_error() {
-	printf("Error, listening\n");
+	perror("listening");
 	exit(EXIT_FAILURE);
 }
 
 void _socket_create_error() {
-	printf("Error creating socket\n");
+	perror("create");
+	exit(EXIT_FAILURE);
+}
+
+void _select_error() {
+	perror("select");
 	exit(EXIT_FAILURE);
 }

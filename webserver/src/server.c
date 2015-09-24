@@ -6,11 +6,11 @@ Conf conf;
 int handle_connection(int filedesc) {
 	
 	char buffer[512];
-	int nbytes;
+	int counter;
 	
-	nbytes = read(filedesc, buffer, 512);
+	counter = read(filedesc, buffer, 512);
 	
-	if(nbytes < 0) {
+	if(counter < 0) {
 		perror("read error");
 		exit(EXIT_FAILURE);
 	}	
@@ -28,8 +28,7 @@ int create_server(uint16_t port) {
 	struct sockaddr_in server;
 
 	if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("Error creating sock");
-		exit(EXIT_FAILURE);
+		_error(SCREATE_ERROR);
 	}
 
 	server.sin_family = AF_INET;
@@ -37,53 +36,63 @@ int create_server(uint16_t port) {
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
 	
 	if(bind(sock, (struct sockaddr *) &server, sizeof(server)) < 0) {
-		perror("Error binding socket");
-		exit(EXIT_FAILURE);
+		_error(SBIND_ERROR);
 	}
 	return sock;
 }
 
 void run_server() {
-		
-	int server_sock, index;
-	fd_set active_fd_set, read_fd_set;
-	struct sockaddr_in client;
+	
+	struct sockaddr_in client;		
+	int server_sock;
+	int index;
+	fd_set file_set;
+	fd_set ready_files;
 	socklen_t sock_len;
+
 	server_sock = create_server(PORT);
 	
-	if(listen(server_sock, 10000) < 0) {
-		perror("Error listening");
-		exit(EXIT_FAILURE);
+	if(listen(server_sock, MAXQ) < 0) {
+		_error(SLISTEN_ERROR);
 	}
 
-	FD_ZERO (&active_fd_set);
-	FD_SET (server_sock, &active_fd_set);
+	FD_ZERO (&file_set);
+	FD_SET (server_sock, &file_set);
 	
-	while(1) { 				
-		read_fd_set = active_fd_set;
-		if(select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0) {
-			perror("select error");
-			exit(EXIT_FAILURE);
+	while(1) { 		
+
+		ready_files = file_set;
+
+		if(select(FD_SETSIZE, &ready_files, NULL, NULL, NULL) < 0) {
+			_error(SELECT_ERROR);
 		}
-		// Service sockets with input 
+
 		for(index = 0; index < FD_SETSIZE; index++) {
-			if(FD_ISSET(index, &read_fd_set)) {
+
+			if(FD_ISSET(index, &ready_files)) {
+
 				if(index == server_sock) {
 					int new_con;
 					sock_len = sizeof(client);
 					new_con = accept(server_sock, (struct sockaddr *) &client, &sock_len);
+
 					if(new_con < 0) {
-						perror("Error accepting new con");
-						exit(EXIT_FAILURE);
+						_error(SACCEPT_ERROR);
 					}
-					fprintf(stderr, "Server: Connection from host: %hd, port: %hd. \n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
-					FD_SET(new_con, &active_fd_set);
+
+					fprintf(
+						stderr, 
+						"ip: %s, port: %d connected\n",
+						inet_ntoa(client.sin_addr), 
+						(int)ntohs(client.sin_port)
+					);
+
+					FD_SET(new_con, &file_set);
 				}
-				else {
-					// Data on an already connected socket 
+				else { 
 					if(handle_connection(index)) {
 						close(index);
-						FD_CLR(index, &active_fd_set);
+						FD_CLR(index, &file_set);
 					}
 				}
 			}
