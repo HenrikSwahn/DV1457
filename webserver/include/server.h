@@ -26,13 +26,13 @@ typedef struct {
 	char* concurrency;
 } Conf;
 
-void run_server();
+void run_server(int lPort);
 void parse_request(int, char*);
 Conf readConf();
 int parsePort(char a[]);
 char* parseDir(char a[]);
 void sendPage(int);
-int create_server(uint16_t);
+int create_server(uint16_t, int lPort);
 int handle_connection(int);
 
 #endif

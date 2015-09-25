@@ -20,7 +20,7 @@ int handle_connection(int filedesc) {
 	}
 }
 
-int create_server(uint16_t port) {
+int create_server(uint16_t port, int lPort) {
 
 	conf = readConf();
 
@@ -32,7 +32,14 @@ int create_server(uint16_t port) {
 	}
 
 	server.sin_family = AF_INET;
-	server.sin_port = htons(conf.port);
+	if(lPort != -1)
+	{
+	  server.sin_port = htons(lPort);
+	}
+	else
+	{
+	  server.sin_port = htons(conf.port);
+	}
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
 	
 	if(bind(sock, (struct sockaddr *) &server, sizeof(server)) < 0) {
@@ -41,7 +48,7 @@ int create_server(uint16_t port) {
 	return sock;
 }
 
-void run_server() {
+void run_server(int lPort) {
 	
 	struct sockaddr_in client;		
 	int server_sock;
@@ -50,8 +57,8 @@ void run_server() {
 	fd_set ready_files;
 	socklen_t sock_len;
 
-	server_sock = create_server(PORT);
-	
+	server_sock = create_server(PORT,lPort);
+      
 	if(listen(server_sock, MAXQ) < 0) {
 		_error(SLISTEN_ERROR);
 	}
