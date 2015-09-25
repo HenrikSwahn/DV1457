@@ -28,11 +28,11 @@ typedef struct {
 
 void run_server();
 void parse_request(int, char*);
-Conf readConf();
-int parsePort(char a[]);
-char* parseDir(char a[]);
-void sendPage(int);
+Conf read_conf();
+int parse_port(char a[]);
+char* parse_dir(char a[]);
+void send_page(int);
 int create_server(uint16_t);
 int handle_connection(int);
-
+void get_req(char *, int);
 #endif

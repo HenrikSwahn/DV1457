@@ -21,8 +21,8 @@ int handle_connection(int filedesc) {
 }
 
 int create_server(uint16_t port) {
-
-	conf = readConf();
+	
+	conf = read_conf();
 
 	int sock;
 	struct sockaddr_in server;
@@ -102,15 +102,48 @@ void run_server() {
 
 void parse_request(int socket, char * buffer) {
 	
+	char *token = strtok(buffer, " ");
+
+	while(token) {
+		////printf("token: %s\n", token);
+
+		if(strcmp(token, "GET") == 0) {
+			token = strtok(NULL, " ");
+			if(strstr(token, "/") != NULL) {
+				get_req(token, socket);
+				break;
+			}
+		}
+		token = strtok(NULL, " ");
+	}	
+
 	//If GET request
-	if(strstr(buffer, "GET") != NULL) {
+	/*if(strstr(buffer, "GET") != NULL) {
 		sendPage(socket);
 	} else {
 		write(socket, HTTP_NOT_IMPL, strlen(HTTP_NOT_IMPL));
-	}
+	}*/
 }
 
-void sendPage(int filedesc) {
+//Content length
+//Content type
+//modifed date
+//server name
+
+void get_req(char *path, int socket) {
+	
+	if(strcmp(path, "/") == 0) {
+		//index
+		send_page(socket);
+	}
+	else if(strcmp(path, "/index.html") == 0) {
+		//Index
+		send_page(socket);
+	}	
+}
+
+
+void send_page(int filedesc) {
 
 	FILE *file = fopen("../www/index.html", "rt");
 	char * body;
@@ -146,7 +179,7 @@ void sendPage(int filedesc) {
 	free(response);
 }
 
-Conf readConf() {
+Conf read_conf() {
 	
 	Conf c;
 	FILE *file;
@@ -158,9 +191,9 @@ Conf readConf() {
 		while(fgets(line, 128, file) != NULL) {
 			sscanf(line, "%[^\n]", buff);
 			if(strstr(buff, "PORT") != NULL) {
-				c.port = parsePort(buff);
+				c.port = parse_port(buff);
 			}else if(strstr(buff, "DIR") != NULL) {
-				c.path=parseDir(buff);	
+				c.path=parse_dir(buff);	
 			}
 		}
 	}
@@ -170,7 +203,7 @@ Conf readConf() {
 	return c;
 }
 
-int parsePort(char arr[]) {
+int parse_port(char arr[]) {
 	
 	int port = -1;
 	sscanf(arr, "%*[^0123456789]%d", &port);
@@ -182,7 +215,7 @@ int parsePort(char arr[]) {
 	return port;
 }
 
-char* parseDir(char arr[]) {
+char* parse_dir(char arr[]) {
 	
 	char * dir;
 
