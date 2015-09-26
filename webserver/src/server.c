@@ -91,6 +91,7 @@ void run_server() {
 				}
 				else { 
 					if(handle_connection(index)) {
+						puts("CLOSED");
 						close(index);
 						FD_CLR(index, &file_set);
 					}
@@ -114,15 +115,19 @@ void parse_request(int socket, char * buffer) {
 				break;
 			}
 		}
+		else if(strcmp(token, "HEAD") == 0) {
+			token = strtok(NULL, " ");
+			if(strstr(token, "/") != NULL) {
+				//head_req
+				break;
+			}
+		}
+		else {
+			write(socket, HTTP_NOT_IMPL, strlen(HTTP_NOT_IMPL));
+			break;
+		}
 		token = strtok(NULL, " ");
 	}	
-
-	//If GET request
-	/*if(strstr(buffer, "GET") != NULL) {
-		sendPage(socket);
-	} else {
-		write(socket, HTTP_NOT_IMPL, strlen(HTTP_NOT_IMPL));
-	}*/
 }
 
 //Content length
@@ -132,51 +137,83 @@ void parse_request(int socket, char * buffer) {
 
 void get_req(char *path, int socket) {
 	
-	if(strcmp(path, "/") == 0) {
-		//index
-		send_page(socket);
-	}
-	else if(strcmp(path, "/index.html") == 0) {
-		//Index
-		send_page(socket);
+	if(strcmp(path, "/") == 0 || strcmp(path, "/index.html") == 0) {
+		
+		char *file_path = append_strings(BASE_DIR, "index.html");
+		FILE *file = fopen(file_path, "r");
+
+		if(file != NULL) {
+			char * res = read_file(file);
+			write(socket, res, strlen(res));
+			fclose(file);
+			free(res);
+		}
+		
+		free(file_path);
+	}else {
+
+		char *file_path = append_strings(BASE_DIR, path+1);//+1 to get rid of first /
+		FILE *file = fopen(file_path, "r");
+
+		if(file != NULL) {
+			char * res = read_file(file);
+			write(socket, res, strlen(res));
+			fclose(file);
+			free(res);
+		}
+		else {
+			write(socket, HTTP_NOT_FOUND, strlen(HTTP_NOT_FOUND));
+		}
 	}	
 }
 
+//Konstigt beteende
+char *append_strings(char *s1, char *s2) {
 
-void send_page(int filedesc) {
+	int s1_len = strlen(s1);
+	int s2_len = strlen(s2);
+	char *r = malloc(s1_len + s2_len + 1);
 
-	FILE *file = fopen("../www/index.html", "rt");
-	char * body;
-	size_t bodyLen = 0;
+	memcpy(r, s1, s1_len);
+	memcpy(r+s1_len, s2, s2_len+1);
+
+	return r;
+}
+
+char * read_file(FILE *file) {
+
+	char *response;
+	size_t n = 0;
 	int c;
+	long file_size = -1;
+	size_t head_len = -1;
 
-	body = malloc(1024);
-	while((c = fgetc(file)) != EOF) {
-		body[bodyLen++] = (char) c;
-	}
-	
-	body[bodyLen] = '\0';
-	
-	char * response;
-	size_t len = strlen(HTTP_OK) +
+	//Get size of file
+	fseek(file, 0, SEEK_END);
+	file_size = ftell(file);
+	fseek(file, 0, SEEK_SET);
+
+	head_len = strlen(HTTP_OK) +
 		strlen(HEADER_CONT_TYPE) +
 		strlen(HEADER_LANG) +
-		strlen("\n") +  
-		bodyLen;
-	
-	response = malloc(len);
- 	
-	strcat(response, HTTP_OK);
+		strlen("\n");
+
+	response = malloc(head_len + file_size + 1);
+
+	strcpy(response, HTTP_OK);
 	strcat(response, HEADER_LANG);
 	strcat(response, HEADER_CONT_TYPE);
 	strcat(response, "\n");
-	strcat(response, body);
-	
-	response[len] = '\0';
-	write(filedesc, response, len); 
 
-	free(body);
-	free(response);
+	n = head_len;
+
+	while((c = fgetc(file)) != EOF) {
+		response[n++] = (char)c;
+	}
+
+	response[n] = '\0';
+
+	return response;
 }
 
 Conf read_conf() {
