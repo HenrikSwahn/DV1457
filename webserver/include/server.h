@@ -20,6 +20,7 @@
 #define HTTP_NOT_IMPL "HTTP/1.0 501 Not Implemented\n"
 #define HEADER_CONT_TYPE "Content-Type: text/html\n"
 #define HEADER_LANG "Content-Language: en\n"
+#define HEADER_CONT_LEN "Content-Length: "
 #define PORT 12000
 #define MAXQ 10000
 #define BASE_DIR "../www"
@@ -40,5 +41,6 @@ Conf read_conf();
 int parse_port(char a[]);
 char* parse_dir(char a[]);
 char *append_strings(char *s1, char *s2);
+char *cont_length(long);
 
 #endif

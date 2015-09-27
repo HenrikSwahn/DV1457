@@ -229,15 +229,19 @@ char * read_file(FILE *file) {
 	int c;
 	long file_size = -1;
 	size_t head_len = -1;
+	char *cont_len;
 
 	//Get size of file
 	fseek(file, 0, SEEK_END);
 	file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
+	
+	cont_len = cont_length(file_size);
 
 	head_len = strlen(HTTP_OK) +
 		strlen(HEADER_CONT_TYPE) +
 		strlen(HEADER_LANG) +
+		strlen(cont_len) +
 		strlen("\n");
 
 	response = malloc(head_len + file_size + 1);
@@ -245,6 +249,7 @@ char * read_file(FILE *file) {
 	strcpy(response, HTTP_OK);
 	strcat(response, HEADER_LANG);
 	strcat(response, HEADER_CONT_TYPE);
+	strcat(response, cont_len);
 	strcat(response, "\n");
 
 	n = head_len;
@@ -255,6 +260,7 @@ char * read_file(FILE *file) {
 
 	response[n] = '\0';
 
+	free(cont_len);
 	return response;
 }
 
@@ -341,4 +347,13 @@ char *append_strings(char *s1, char *s2) {
 	memcpy(r+s1_len, s2, s2_len+1);
 
 	return r;
+}
+
+char *cont_length(long size) {
+
+	char body_len[10];
+	sprintf(body_len, "%ld\n", size);
+	char *b_l = body_len;
+	char * cont_len = append_strings(HEADER_CONT_LEN, b_l);
+	return cont_len;
 }
