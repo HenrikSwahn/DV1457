@@ -6,32 +6,29 @@
 #include <stdio.h>
 #include <ctype.h>
 
-void printHelpText()
-{
-   printf("\nUsage of server: \n-h  prints help text\n-p  set port server will listen to\n\n");
+void printHelpText() {
+	printf("\nUsage of server: \n-h  prints help text\n-p  set port server will listen to\n\n");
 }
 
-int readArgs(int nr, char *args[])
-{
-  int arg;
-  int port = -1;
-  while((arg = getopt(nr,args,"hp:")) !=-1)
-  {
-      switch (arg)
-      {
-      case 'h':
-	printHelpText();
-	exit(0);
-	break;
-      case 'p':
-	port = atoi(optarg);
-	break;
-      default:
-	printHelpText();
-	exit(3);
-      }
-  }
-  return port;
+int readArgs(int nr, char *args[]) {
+	int arg;
+	int port = -1;
+  
+	while((arg = getopt(nr,args,"hp:")) !=-1) {
+		switch (arg) {
+			case 'h':
+				printHelpText();
+				exit(0);
+				break;
+			case 'p':
+				port = atoi(optarg);
+				break;
+			default:
+				printHelpText();
+				exit(3);
+      	}
+	}
+	return port;
 }
 
 /*void cleanup(int sig) {

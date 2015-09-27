@@ -22,7 +22,7 @@ int handle_connection(int filedesc) {
 
 int create_server(uint16_t port, int lPort) {
 
-	conf = readConf();
+	conf = read_conf();
 
 	int sock;
 	struct sockaddr_in server;
@@ -32,13 +32,11 @@ int create_server(uint16_t port, int lPort) {
 	}
 
 	server.sin_family = AF_INET;
-	if(lPort != -1)
-	{
-	  server.sin_port = htons(lPort);
+	if(lPort != -1) {
+		server.sin_port = htons(lPort);
 	}
-	else
-	{
-	  server.sin_port = htons(conf.port);
+	else {
+		server.sin_port = htons(conf.port);
 	}
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
 	
@@ -98,6 +96,7 @@ void run_server(int lPort) {
 				}
 				else { 
 					if(handle_connection(index)) {
+						puts("CLOSED");
 						close(index);
 						FD_CLR(index, &file_set);
 					}
@@ -109,51 +108,120 @@ void run_server(int lPort) {
 
 void parse_request(int socket, char * buffer) {
 	
-	//If GET request
-	if(strstr(buffer, "GET") != NULL) {
-		sendPage(socket);
-	} else {
-		write(socket, HTTP_NOT_IMPL, strlen(HTTP_NOT_IMPL));
-	}
+	char *token = strtok(buffer, " ");
+
+	while(token) {
+		////printf("token: %s\n", token);
+
+		if(strcmp(token, "GET") == 0) {
+			token = strtok(NULL, " ");
+			if(strstr(token, "/") != NULL) {
+				get_req(token, socket);
+				break;
+			}
+		}
+		else if(strcmp(token, "HEAD") == 0) {
+			token = strtok(NULL, " ");
+			if(strstr(token, "/") != NULL) {
+				//head_req
+				break;
+			}
+		}
+		else {
+			write(socket, HTTP_NOT_IMPL, strlen(HTTP_NOT_IMPL));
+			break;
+		}
+		token = strtok(NULL, " ");
+	}	
 }
 
-void sendPage(int filedesc) {
+//Content length
+//Content type
+//modifed date
+//server name
 
-	FILE *file = fopen("../www/index.html", "rt");
-	char * body;
-	size_t bodyLen = 0;
+void get_req(char *path, int socket) {
+	
+	if(strcmp(path, "/") == 0 || strcmp(path, "/index.html") == 0) {
+		
+		char *file_path = append_strings(BASE_DIR, "index.html");
+		FILE *file = fopen(file_path, "r");
+
+		if(file != NULL) {
+			char * res = read_file(file);
+			write(socket, res, strlen(res));
+			fclose(file);
+			free(res);
+		}
+		
+		free(file_path);
+	}else {
+
+		char *file_path = append_strings(BASE_DIR, path+1);//+1 to get rid of first /
+		FILE *file = fopen(file_path, "r");
+
+		if(file != NULL) {
+			char * res = read_file(file);
+			write(socket, res, strlen(res));
+			fclose(file);
+			free(res);
+		}
+		else {
+			write(socket, HTTP_NOT_FOUND, strlen(HTTP_NOT_FOUND));
+		}
+	}	
+}
+
+//Konstigt beteende
+char *append_strings(char *s1, char *s2) {
+
+	int s1_len = strlen(s1);
+	int s2_len = strlen(s2);
+	char *r = malloc(s1_len + s2_len + 1);
+
+	memcpy(r, s1, s1_len);
+	memcpy(r+s1_len, s2, s2_len+1);
+
+	return r;
+}
+
+char * read_file(FILE *file) {
+
+	char *response;
+	size_t n = 0;
 	int c;
+	long file_size = -1;
+	size_t head_len = -1;
 
-	body = malloc(1024);
-	while((c = fgetc(file)) != EOF) {
-		body[bodyLen++] = (char) c;
-	}
-	
-	body[bodyLen] = '\0';
-	
-	char * response;
-	size_t len = strlen(HTTP_OK) +
+	//Get size of file
+	fseek(file, 0, SEEK_END);
+	file_size = ftell(file);
+	fseek(file, 0, SEEK_SET);
+
+	head_len = strlen(HTTP_OK) +
 		strlen(HEADER_CONT_TYPE) +
 		strlen(HEADER_LANG) +
-		strlen("\n") +  
-		bodyLen;
-	
-	response = malloc(len);
- 	
-	strcat(response, HTTP_OK);
+		strlen("\n");
+
+	response = malloc(head_len + file_size + 1);
+
+	strcpy(response, HTTP_OK);
 	strcat(response, HEADER_LANG);
 	strcat(response, HEADER_CONT_TYPE);
 	strcat(response, "\n");
-	strcat(response, body);
-	
-	response[len] = '\0';
-	write(filedesc, response, len); 
 
-	free(body);
-	free(response);
+	n = head_len;
+
+	while((c = fgetc(file)) != EOF) {
+		response[n++] = (char)c;
+	}
+
+	response[n] = '\0';
+
+	return response;
 }
 
-Conf readConf() {
+Conf read_conf() {
 	
 	Conf c;
 	FILE *file;
@@ -165,9 +233,9 @@ Conf readConf() {
 		while(fgets(line, 128, file) != NULL) {
 			sscanf(line, "%[^\n]", buff);
 			if(strstr(buff, "PORT") != NULL) {
-				c.port = parsePort(buff);
+				c.port = parse_port(buff);
 			}else if(strstr(buff, "DIR") != NULL) {
-				c.path=parseDir(buff);	
+				c.path=parse_dir(buff);	
 			}
 		}
 	}
@@ -177,7 +245,7 @@ Conf readConf() {
 	return c;
 }
 
-int parsePort(char arr[]) {
+int parse_port(char arr[]) {
 	
 	int port = -1;
 	sscanf(arr, "%*[^0123456789]%d", &port);
@@ -189,7 +257,7 @@ int parsePort(char arr[]) {
 	return port;
 }
 
-char* parseDir(char arr[]) {
+char* parse_dir(char arr[]) {
 	
 	char * dir;
 
