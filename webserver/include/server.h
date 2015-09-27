@@ -29,14 +29,14 @@ typedef struct {
 } Conf;
 
 void run_server(int lPort);
+int handle_connection(int);
+int create_server(int);
 void parse_request(int, char*);
+void get_req(char *, int);
+char * read_file(FILE*);
 Conf read_conf();
 int parse_port(char a[]);
 char* parse_dir(char a[]);
-char * read_file(FILE*);
-int create_server(uint16_t, int);
-int handle_connection(int);
-void get_req(char *, int);
 char *append_strings(char *s1, char *s2);
 
 #endif
