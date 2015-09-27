@@ -155,7 +155,7 @@ void parse_request(int socket, char * buffer) {
 		else if(strcmp(token, "HEAD") == 0) {
 			token = strtok(NULL, " ");
 			if(strstr(token, "/") != NULL) {
-				//head_req
+				head_req(token, socket);
 				break;
 			}
 		}
@@ -167,7 +167,6 @@ void parse_request(int socket, char * buffer) {
 	}	
 }
 
-//modifed date
 //server name
 
 /*
@@ -186,7 +185,7 @@ void get_req(char *path, int socket) {
     FILE *file = fopen(file_path, "r");
     
     if(file != NULL) {
-      char * res = read_file(file, file_path);
+      char * res = read_file(file, file_path, "GET");
       write(socket, res, strlen(res));
       fclose(file);
       free(res);
@@ -201,7 +200,46 @@ void get_req(char *path, int socket) {
     if(file_path) {
       FILE *file = fopen(file_path, "r");
 
-      char * res = read_file(file, file_path);
+      char * res = read_file(file, file_path, "GET");
+      write(socket, res, strlen(res));
+      fclose(file);
+      free(res);
+      free(str);
+    }
+    else{
+      write(socket, HTTP_NOT_FOUND, strlen(HTTP_NOT_FOUND));
+    }
+  }	
+}
+
+/*
+ * Function to handle if the client made a HEAD request.
+ * @PARAM {char *path} The path the client want to acces
+ * @PARAM {int socket} server socket filedescriptor value
+ */
+void head_req(char *path, int socket) {
+
+  if(strcmp(path, "/") == 0 ){
+    char *file_path = append_strings(BASE_DIR, "/index.html");
+    FILE *file = fopen(file_path, "r");
+    
+    if(file != NULL) {
+      char * res = read_file(file, file_path, "HEAD");
+      write(socket, res, strlen(res));
+      fclose(file);
+      free(res);
+    }
+    
+    free(file_path);
+  }else {
+    char actualPath [PATH_MAX];
+    char *str = append_strings(BASE_DIR,path);
+    char * file_path = realpath(str,actualPath);
+    
+    if(file_path) {
+      FILE *file = fopen(file_path, "r");
+
+      char * res = read_file(file, file_path, "HEAD");
       write(socket, res, strlen(res));
       fclose(file);
       free(res);
@@ -220,7 +258,7 @@ void get_req(char *path, int socket) {
  * @PARAM {FILE *file} The html page that the client has requested
  * @RETURN A pointer to the response
  */
-char * read_file(FILE *file, char *file_path) {
+char * read_file(FILE *file, char *file_path, char *method) {
 
 	char *response;
 	int c;
@@ -233,6 +271,11 @@ char * read_file(FILE *file, char *file_path) {
 	fseek(file, 0, SEEK_SET);
 	
 	response = build_headers(file_size, file_path);
+
+	if(strcmp(method, "HEAD") == 0) {
+		return response;
+	}
+
 	n = strlen(response);
 
 	while((c = fgetc(file)) != EOF) {
