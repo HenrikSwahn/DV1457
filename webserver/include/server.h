@@ -3,7 +3,6 @@
 
 #include <netinet/in.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -13,6 +12,9 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
+#define _GNU_SOURCE
+#include <stdlib.h>
+
 #define HTTP_OK "HTTP/1.0 200 OK\n"
 #define HTTP_NOT_FOUND "HTTP/1.0 404 Not Found\n"
 #define HTTP_NOT_IMPL "HTTP/1.0 501 Not Implemented\n"
@@ -20,7 +22,7 @@
 #define HEADER_LANG "Content-Language: en\n"
 #define PORT 12000
 #define MAXQ 10000
-#define BASE_DIR "../www/"
+#define BASE_DIR "../www"
 
 typedef struct {
 	uint16_t port;

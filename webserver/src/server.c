@@ -1,5 +1,6 @@
 #include "../include/server.h"
 #include "../include/error.h"
+#include <limits.h>
 
 Conf conf;
 char * default_dir;
@@ -142,7 +143,6 @@ int create_server(int lPort) {
 void parse_request(int socket, char * buffer) {
 	
 	char *token = strtok(buffer, " ");
-
 	while(token) {
 
 		if(strcmp(token, "GET") == 0) {
@@ -174,43 +174,45 @@ void parse_request(int socket, char * buffer) {
 
 /*
  * Function to handle if the client made a GET request.
- * It first checks if the client want to acces / or /index.html,
+ * It first checks if the client want to acces /,
  * if so it sends that file if it can be found. If the client
- * want to access something els like "/page.html" the function 
+ * want to access something els like "/index.html" the function 
  * tries to open that file, if fail returns not found to client
  * @PARAM {char *path} The path the client want to acces
  * @PARAM {int socket} server socket filedescriptor value
  */
 void get_req(char *path, int socket) {
-	
-	if(strcmp(path, "/") == 0 || strcmp(path, "/index.html") == 0) {
-		
-		char *file_path = append_strings(BASE_DIR, "index.html");
-		FILE *file = fopen(file_path, "r");
 
-		if(file != NULL) {
-			char * res = read_file(file);
-			write(socket, res, strlen(res));
-			fclose(file);
-			free(res);
-		}
-		
-		free(file_path);
-	}else {
+  if(strcmp(path, "/") == 0 ){
+    char *file_path = append_strings(BASE_DIR, "/index.html");
+    FILE *file = fopen(file_path, "r");
+    
+    if(file != NULL) {
+      char * res = read_file(file);
+      write(socket, res, strlen(res));
+      fclose(file);
+      free(res);
+    }
+    
+    free(file_path);
+  }else {
+    char actualPath [PATH_MAX];
+    char *str = append_strings(BASE_DIR,path);
+    char * file_path = realpath(str,actualPath);
+    
+    if(file_path) {
+      FILE *file = fopen(file_path, "r");
 
-		char *file_path = append_strings(BASE_DIR, path+1);//+1 to get rid of first /
-		FILE *file = fopen(file_path, "r");
-
-		if(file != NULL) {
-			char * res = read_file(file);
-			write(socket, res, strlen(res));
-			fclose(file);
-			free(res);
-		}
-		else {
-			write(socket, HTTP_NOT_FOUND, strlen(HTTP_NOT_FOUND));
-		}
-	}	
+      char * res = read_file(file);
+      write(socket, res, strlen(res));
+      fclose(file);
+      free(res);
+      free(str);
+    }
+    else{
+      write(socket, HTTP_NOT_FOUND, strlen(HTTP_NOT_FOUND));
+    }
+  }	
 }
 
 /*
