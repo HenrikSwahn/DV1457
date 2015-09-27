@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <time.h>
 
 #define _GNU_SOURCE
 #include <stdlib.h>
@@ -21,6 +22,7 @@
 #define HEADER_CONT_TYPE "Content-Type: text/html\n"
 #define HEADER_LANG "Content-Language: en\n"
 #define HEADER_CONT_LEN "Content-Length: "
+#define HEADER_LAST_MOD "Last-Modified: "
 #define PORT 12000
 #define MAXQ 10000
 #define BASE_DIR "../www"
@@ -36,11 +38,13 @@ int handle_connection(int);
 int create_server(int);
 void parse_request(int, char*);
 void get_req(char *, int);
-char * read_file(FILE*);
+char * read_file(FILE*, char *);
 Conf read_conf();
 int parse_port(char a[]);
 char* parse_dir(char a[]);
 char *append_strings(char *s1, char *s2);
+char *build_headers(long, char *);
 char *cont_length(long);
+char * mod_date(char *);
 
 #endif

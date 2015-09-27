@@ -167,8 +167,6 @@ void parse_request(int socket, char * buffer) {
 	}	
 }
 
-//Content length
-//Content type
 //modifed date
 //server name
 
@@ -188,7 +186,7 @@ void get_req(char *path, int socket) {
     FILE *file = fopen(file_path, "r");
     
     if(file != NULL) {
-      char * res = read_file(file);
+      char * res = read_file(file, file_path);
       write(socket, res, strlen(res));
       fclose(file);
       free(res);
@@ -203,7 +201,7 @@ void get_req(char *path, int socket) {
     if(file_path) {
       FILE *file = fopen(file_path, "r");
 
-      char * res = read_file(file);
+      char * res = read_file(file, file_path);
       write(socket, res, strlen(res));
       fclose(file);
       free(res);
@@ -222,37 +220,20 @@ void get_req(char *path, int socket) {
  * @PARAM {FILE *file} The html page that the client has requested
  * @RETURN A pointer to the response
  */
-char * read_file(FILE *file) {
+char * read_file(FILE *file, char *file_path) {
 
 	char *response;
-	size_t n = 0;
 	int c;
 	long file_size = -1;
-	size_t head_len = -1;
-	char *cont_len;
+	size_t n = 0;
 
 	//Get size of file
 	fseek(file, 0, SEEK_END);
 	file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
 	
-	cont_len = cont_length(file_size);
-
-	head_len = strlen(HTTP_OK) +
-		strlen(HEADER_CONT_TYPE) +
-		strlen(HEADER_LANG) +
-		strlen(cont_len) +
-		strlen("\n");
-
-	response = malloc(head_len + file_size + 1);
-
-	strcpy(response, HTTP_OK);
-	strcat(response, HEADER_LANG);
-	strcat(response, HEADER_CONT_TYPE);
-	strcat(response, cont_len);
-	strcat(response, "\n");
-
-	n = head_len;
+	response = build_headers(file_size, file_path);
+	n = strlen(response);
 
 	while((c = fgetc(file)) != EOF) {
 		response[n++] = (char)c;
@@ -260,7 +241,6 @@ char * read_file(FILE *file) {
 
 	response[n] = '\0';
 
-	free(cont_len);
 	return response;
 }
 
@@ -347,6 +327,51 @@ char *append_strings(char *s1, char *s2) {
 	memcpy(r+s1_len, s2, s2_len+1);
 
 	return r;
+}
+
+char *build_headers(long size, char *file_path) {
+	
+	char *response;
+	char *cont_len;
+	size_t head_len = -1;
+	char *last_mod;
+
+	cont_len = cont_length(size);
+	last_mod = mod_date(file_path);
+
+	head_len = strlen(HTTP_OK) +
+		strlen(HEADER_CONT_TYPE) +
+		strlen(HEADER_LANG) +
+		strlen(cont_len) +
+		strlen(last_mod) +
+		strlen("\n");
+
+	response = malloc(head_len + size + 1);
+
+	strcpy(response, HTTP_OK);
+	strcat(response, HEADER_LANG);
+	strcat(response, HEADER_CONT_TYPE);
+	strcat(response, cont_len);
+	strcat(response, last_mod);
+	strcat(response, "\n");
+
+	free(cont_len);
+	free(last_mod);
+	return response;
+}
+
+char * mod_date(char *path) {
+	char date_arr[10];
+	char *d_p;
+	char *date;
+	struct stat info;
+
+	stat(path, &info);
+    strftime(date_arr, 20, "%y/%m/%d/%H:%M:%S\n", localtime(&(info.st_ctime)));
+    d_p = date_arr;
+    date = append_strings(HEADER_LAST_MOD, d_p);
+
+    return date;
 }
 
 char *cont_length(long size) {
