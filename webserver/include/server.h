@@ -23,6 +23,7 @@
 #define HEADER_LANG "Content-Language: en\n"
 #define HEADER_CONT_LEN "Content-Length: "
 #define HEADER_LAST_MOD "Last-Modified: "
+#define HEADER_SERV_NAME "Server: Henrik/Andreas 1.0\n"
 #define PORT 12000
 #define MAXQ 10000
 #define BASE_DIR "../www"

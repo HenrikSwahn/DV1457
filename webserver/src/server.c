@@ -167,8 +167,6 @@ void parse_request(int socket, char * buffer) {
 	}	
 }
 
-//server name
-
 /*
  * Function to handle if the client made a GET request.
  * It first checks if the client want to acces /,
@@ -387,6 +385,7 @@ char *build_headers(long size, char *file_path) {
 		strlen(HEADER_LANG) +
 		strlen(cont_len) +
 		strlen(last_mod) +
+		strlen(HEADER_SERV_NAME) +
 		strlen("\n");
 
 	response = malloc(head_len + size + 1);
@@ -396,6 +395,7 @@ char *build_headers(long size, char *file_path) {
 	strcat(response, HEADER_CONT_TYPE);
 	strcat(response, cont_len);
 	strcat(response, last_mod);
+	strcat(response, HEADER_SERV_NAME);
 	strcat(response, "\n");
 
 	free(cont_len);
