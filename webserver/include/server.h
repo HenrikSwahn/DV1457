@@ -40,12 +40,12 @@ int create_server(int);
 void parse_request(int, char*);
 void get_req(char *, int);
 void head_req(char *, int);
-char * read_file(FILE*, char *, char *);
+char * read_file(FILE*, char *, char *, int);
 Conf read_conf();
 int parse_port(char a[]);
 char* parse_dir(char a[]);
 char *append_strings(char *s1, char *s2);
-char *build_headers(long, char *);
+char *build_headers(long, char *, int);
 char *cont_length(long);
 char * mod_date(char *);
 

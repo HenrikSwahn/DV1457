@@ -176,78 +176,97 @@ void parse_request(int socket, char * buffer) {
  * @PARAM {char *path} The path the client want to acces
  * @PARAM {int socket} server socket filedescriptor value
  */
-void get_req(char *path, int socket) {
+ void get_req(char *path, int socket) {
 
-  if(strcmp(path, "/") == 0 ){
-    char *file_path = append_strings(BASE_DIR, "/index.html");
-    FILE *file = fopen(file_path, "r");
-    
-    if(file != NULL) {
-      char * res = read_file(file, file_path, "GET");
-      write(socket, res, strlen(res));
-      fclose(file);
-      free(res);
-    }
-    
-    free(file_path);
-  }else {
-    char actualPath [PATH_MAX];
-    char *str = append_strings(BASE_DIR,path);
-    char * file_path = realpath(str,actualPath);
-    
-    if(file_path) {
-      FILE *file = fopen(file_path, "r");
+ 	if(strcmp(path, "/") == 0 ){
+ 		char *file_path = append_strings(BASE_DIR, "/index.html");
+ 		FILE *file = fopen(file_path, "r");
 
-      char * res = read_file(file, file_path, "GET");
-      write(socket, res, strlen(res));
-      fclose(file);
-      free(res);
-      free(str);
-    }
-    else{
-      write(socket, HTTP_NOT_FOUND, strlen(HTTP_NOT_FOUND));
-    }
-  }	
-}
+ 		if(file != NULL) {
+ 			char * res = read_file(file, file_path, "GET", 200);
+ 			write(socket, res, strlen(res));
+ 			fclose(file);
+ 			free(res);
+ 		}
+
+ 		free(file_path);
+ 	}else {
+ 		char actualPath [PATH_MAX];
+ 		char *str = append_strings(BASE_DIR,path);
+ 		char * file_path = realpath(str,actualPath);
+
+ 		if(file_path) {
+ 			FILE *file = fopen(file_path, "r");
+
+ 			char * res = read_file(file, file_path, "GET", 200);
+ 			write(socket, res, strlen(res));
+ 			fclose(file);
+ 			free(res);
+ 			free(str);
+ 		}
+ 		else{
+ 			char *file_path = append_strings(BASE_DIR, "/404.html");
+ 			FILE *file = fopen(file_path, "r");
+
+ 			if(file != NULL) {
+ 				char * res = read_file(file, file_path, "GET", 404);
+ 				write(socket, res, strlen(res));
+ 				fclose(file);
+ 				free(res);
+ 			}
+ 			free(file_path);
+ 		}
+ 	}	
+ }
 
 /*
  * Function to handle if the client made a HEAD request.
  * @PARAM {char *path} The path the client want to acces
  * @PARAM {int socket} server socket filedescriptor value
  */
-void head_req(char *path, int socket) {
+ void head_req(char *path, int socket) {
 
-  if(strcmp(path, "/") == 0 ){
-    char *file_path = append_strings(BASE_DIR, "/index.html");
-    FILE *file = fopen(file_path, "r");
-    
-    if(file != NULL) {
-      char * res = read_file(file, file_path, "HEAD");
-      write(socket, res, strlen(res));
-      fclose(file);
-      free(res);
-    }
-    
-    free(file_path);
-  }else {
-    char actualPath [PATH_MAX];
-    char *str = append_strings(BASE_DIR,path);
-    char * file_path = realpath(str,actualPath);
-    
-    if(file_path) {
-      FILE *file = fopen(file_path, "r");
+ 	if(strcmp(path, "/") == 0 ){
+ 		char *file_path = append_strings(BASE_DIR, "/index.html");
+ 		FILE *file = fopen(file_path, "r");
 
-      char * res = read_file(file, file_path, "HEAD");
-      write(socket, res, strlen(res));
-      fclose(file);
-      free(res);
-      free(str);
-    }
-    else{
-      write(socket, HTTP_NOT_FOUND, strlen(HTTP_NOT_FOUND));
-    }
-  }	
-}
+ 		if(file != NULL) {
+ 			char * res = read_file(file, file_path, "HEAD", 200);
+ 			write(socket, res, strlen(res));
+ 			fclose(file);
+ 			free(res);
+ 		}
+
+ 		free(file_path);
+ 	}else {
+ 		char actualPath [PATH_MAX];
+ 		char *str = append_strings(BASE_DIR,path);
+ 		char * file_path = realpath(str,actualPath);
+
+ 		if(file_path) {
+ 			FILE *file = fopen(file_path, "r");
+
+ 			char * res = read_file(file, file_path, "HEAD", 200);
+ 			write(socket, res, strlen(res));
+ 			fclose(file);
+ 			free(res);
+ 			free(str);
+ 		}
+ 		else{
+
+ 			char *file_path = append_strings(BASE_DIR, "/404.html");
+ 			FILE *file = fopen(file_path, "r");
+
+ 			if(file != NULL) {
+ 				char * res = read_file(file, file_path, "HEAD", 404);
+ 				write(socket, res, strlen(res));
+ 				fclose(file);
+ 				free(res);
+ 			}
+ 			free(file_path);
+ 		}
+ 	}	
+ }
 
 /*
  * Function that read the requested html page, 
@@ -256,7 +275,7 @@ void head_req(char *path, int socket) {
  * @PARAM {FILE *file} The html page that the client has requested
  * @RETURN A pointer to the response
  */
-char * read_file(FILE *file, char *file_path, char *method) {
+char * read_file(FILE *file, char *file_path, char *method, int code) {
 
 	char *response;
 	int c;
@@ -268,7 +287,7 @@ char * read_file(FILE *file, char *file_path, char *method) {
 	file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
 	
-	response = build_headers(file_size, file_path);
+	response = build_headers(file_size, file_path, code);
 
 	if(strcmp(method, "HEAD") == 0) {
 		return response;
@@ -305,6 +324,7 @@ Conf read_conf() {
 			if(strstr(buff, "PORT") != NULL) {
 				c.port = parse_port(buff);
 			}else if(strstr(buff, "DIR") != NULL) {
+				char *r = parse_dir(buff);
 				c.path=parse_dir(buff);	
 			}
 		}
@@ -343,13 +363,13 @@ int parse_port(char arr[]) {
 char* parse_dir(char arr[]) {
 	
 	char * dir;
-
-	dir = strstr(arr, "/");
+	dir = arr;
+	dir += 4;
 
 	if(dir != NULL) {
 		return(dir);
 	}
-	return 0;
+	return NULL;
 }
 
 /*
@@ -370,17 +390,30 @@ char *append_strings(char *s1, char *s2) {
 	return r;
 }
 
-char *build_headers(long size, char *file_path) {
+char *build_headers(long size, char *file_path, int code) {
 	
 	char *response;
 	char *cont_len;
 	size_t head_len = -1;
 	char *last_mod;
+	char *status_code;
 
 	cont_len = cont_length(size);
 	last_mod = mod_date(file_path);
 
-	head_len = strlen(HTTP_OK) +
+	switch(code) {
+		case 200:
+			status_code = HTTP_OK;
+			break;
+		case 404:
+			status_code = HTTP_NOT_FOUND;
+			break;
+		default:
+			status_code = HTTP_OK;
+			break;
+	}
+
+	head_len = strlen(status_code) +
 		strlen(HEADER_CONT_TYPE) +
 		strlen(HEADER_LANG) +
 		strlen(cont_len) +
@@ -390,7 +423,7 @@ char *build_headers(long size, char *file_path) {
 
 	response = malloc(head_len + size + 1);
 
-	strcpy(response, HTTP_OK);
+	strcpy(response, status_code);
 	strcat(response, HEADER_LANG);
 	strcat(response, HEADER_CONT_TYPE);
 	strcat(response, cont_len);
@@ -418,7 +451,6 @@ char * mod_date(char *path) {
 }
 
 char *cont_length(long size) {
-
 	char body_len[10];
 	sprintf(body_len, "%ld\n", size);
 	char *b_l = body_len;
