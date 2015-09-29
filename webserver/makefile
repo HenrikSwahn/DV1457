@@ -22,4 +22,5 @@ server: $(OBJECTS) $(HEADERS)
 .PHONY: clean
 
 clean: 
-	rm -f $(OBJ)/*.o 
+	rm -f $(OBJ)/*.o
+	rm server 

@@ -32,6 +32,8 @@ void run_server(int lPort) {
 		_error(SLISTEN_ERROR);
 	}
 
+	printf("Server started on listening on port: %d\nMain dir is: %s\nConcurrency method is set to: %s\n", conf.port, conf.path, conf.concurrency);
+
 	FD_ZERO (&file_set);
 	FD_SET (server_sock, &file_set);
 	
@@ -90,7 +92,6 @@ int handle_connection(int socket) {
 	int ret;
 	
 	ret = read(socket, buffer, 512);
-	printf("%s\n", buffer);
 	
 	if(ret < 0) {
 		perror("read error");
@@ -121,15 +122,12 @@ int create_server(int lPort) {
 
 	server.sin_family = AF_INET;
 	if(lPort != -1) {
-		server.sin_port = htons(lPort);
-		printf("Server: Got port: %d from program argument, using it\n", lPort);
-	}
-	else if(conf.port > 1024) {
+		conf.port = lPort; 
 		server.sin_port = htons(conf.port);
-		printf("Server: Got port: %d from config file, using it\n", conf.port);
-	}else {
-		server.sin_port = htons(PORT);
-		printf("Server: No port specified, setting to system default: %d\n", PORT);
+		printf("Server: Got port: %d from program argument, overriding system default/config file port\n", conf.port);
+	}
+	else {
+		server.sin_port = htons(conf.port);
 	}
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
 	
@@ -280,6 +278,9 @@ void parse_request(int socket, char * buffer) {
  * builds a reponse and returns a pointer to
  * the response
  * @PARAM {FILE *file} The html page that the client has requested
+ * @PARAM
+ * @PARAM
+ * @PARAM
  * @RETURN A pointer to the response
  */
 char * read_file(FILE *file, char *file_path, char *method, int code) {
@@ -320,31 +321,102 @@ char * read_file(FILE *file, char *file_path, char *method, int code) {
 Conf read_conf() {
 	
 	Conf c;
+	c.port = -1;
+	c.path = NULL,
+	c.concurrency = NULL;
 	FILE *file;
-	char line[128];
-	char buff[128];
+	char *buff;
+	size_t file_size = 0;
+	size_t index = 0;
+	int c_har;
+	char *token;
 
 	file = fopen("./test.config", "rt");
 	if(file != NULL) {	
-		while(fgets(line, 128, file) != NULL) {
-			sscanf(line, "%[^\n]", buff);
-			if(strstr(buff, "PORT") != NULL) {
-				c.port = parse_port(buff);
-			}else if(strstr(buff, "DIR") != NULL) {
-				char *r = parse_dir(buff);
-				c.path=parse_dir(buff);	
+
+		fseek(file, 0, SEEK_END);
+		file_size = ftell(file);
+		fseek(file, 0, SEEK_SET);
+
+		if(file_size == 0) {
+			fclose(file);
+			c.port = PORT;
+			c.path = BASE_DIR;
+			c.concurrency = CONCURRENCY;
+			printf("Server: No port specified, setting to system default: %d\n", PORT);
+			printf("Server: No path specified, setting to system default: %s\n", BASE_DIR);
+			printf("Server: No concurrency method specified, setting to system default: %s\n", CONCURRENCY);
+			return c;
+		}
+
+		buff = malloc(file_size + 1);
+
+		while((c_har = fgetc(file)) != EOF) {
+			buff[index++] = (char) c_har;
+		} 
+
+		buff[index] = '\0';
+
+		token = strtok(buff, "=");
+
+		while(token) {
+
+			if(strcmp(token, "DIR") == 0) {
+				token = strtok(NULL, "\n");
+				c.path = parse_dir(token);
+				token = strtok(NULL, "=");
 			}
+			else if(strcmp(token, "PORT") == 0) {
+				token = strtok(NULL, "\n");
+				c.port = parse_port(token);
+				
+				if(c.port < 1024) {
+					printf("Invalid port number found in config file, setting to system defulat: %d\n", PORT);
+					c.port = PORT;
+				}
+
+				token = strtok(NULL, "=");
+			}
+			else if(strcmp(token, "CON") == 0) {
+				token = strtok(NULL, "\n");
+				c.concurrency = token;
+				token = strtok(NULL, "=");
+			}
+			else {
+				printf("Format error in config file\n%s%s%s%s%s", 
+					"Usage:\n",
+					"\tDIR={your path}\n",
+					"\tPORT={your port}\n",
+					"\tCON={Your concurrency method}\n",
+					"All are optional, if non are specified program argument or system default will be used\n");
+				exit(EXIT_FAILURE);
+			}	
 		}
 
-		if(strlen(c.path) == 0) {
-			c.path = "N/A";
+		//No port was specified in the config file
+		if(c.port == -1) {
+			printf("No port number was specified in the config file, setting to system default: %d\n", PORT);
+			c.port = PORT;
 		}
 
+		//No path was specified in config, set to system default
+		if(c.path == NULL) {
+			printf("No path was specified in the config, setting to system defualt: %s\n", BASE_DIR);
+			c.path = BASE_DIR;
+		}
+
+		//No concurrency method was specified in the config file
+		if(c.concurrency == NULL) {
+			printf("No concurrency method was specified in the config file, setting to system default: %s\n", CONCURRENCY);
+			c.concurrency = CONCURRENCY;
+		}
+
+		free(buff);
 		fclose(file);
 	}
 	else {
 		printf("ERROR");
-	} 
+	}
 	return c;
 }
 
@@ -354,10 +426,10 @@ Conf read_conf() {
  * @PARAM {char arr[]} The string that holds the port number
  * @RETRUN The found port number
  */
-int parse_port(char arr[]) {
+int parse_port(char *arr) {
 	
 	int port = -1;
-	sscanf(arr, "%*[^0123456789]%d", &port);
+	sscanf(arr, "%d", &port);
 	return port;
 }
 
@@ -367,14 +439,10 @@ int parse_port(char arr[]) {
  * @PARAM {char arr[]} The string that holds the path
  * @RETRUN The found path
  */
-char* parse_dir(char arr[]) {
-	
-	char * dir;
-	dir = arr;
-	dir += 4;
+char* parse_dir(char *arr) {
 
-	if(dir != NULL) {
-		return(dir);
+	if(arr != NULL) {
+		return arr;
 	}
 	return NULL;
 }

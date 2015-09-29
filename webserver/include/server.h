@@ -26,8 +26,9 @@
 #define HEADER_LAST_MOD "Last-Modified: "
 #define HEADER_SERV_NAME "Server: Henrik/Andreas 1.0\n"
 #define PORT 12000
-#define MAXQ 10000
+#define CONCURRENCY "MULTIPLEXING"
 #define BASE_DIR "../www"
+#define MAXQ 10000
 
 typedef struct {
 	uint16_t port;
@@ -44,8 +45,8 @@ void get_req(char *, int);
 void head_req(char *, int);
 char * read_file(FILE*, char *, char *, int);
 Conf read_conf();
-int parse_port(char a[]);
-char* parse_dir(char a[]);
+int parse_port(char *);
+char* parse_dir(char *);
 char *append_strings(char *s1, char *s2);
 char *build_headers(long, char *, int);
 char *cont_length(long);
