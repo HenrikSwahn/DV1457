@@ -5,7 +5,7 @@ Conf conf;
 char * default_dir;
 
 void cleanup(int sig) {
-	
+
 }
 
 /*
@@ -18,7 +18,7 @@ void cleanup(int sig) {
  */
 void run_server(int lPort) {
 	
-	signal(SIGINT, cleanup);
+	//signal(SIGINT, cleanup);
 	struct sockaddr_in client;		
 	int server_sock;
 	int index;
@@ -90,6 +90,7 @@ int handle_connection(int socket) {
 	int ret;
 	
 	ret = read(socket, buffer, 512);
+	printf("%s\n", buffer);
 	
 	if(ret < 0) {
 		perror("read error");
@@ -197,28 +198,28 @@ void parse_request(int socket, char * buffer) {
  	}else {
  		char actualPath [PATH_MAX];
  		char *str = append_strings(BASE_DIR,path);
- 		char * file_path = realpath(str,actualPath);
+ 		char * real_file_path = realpath(str,actualPath);
 
- 		if(file_path) {
- 			FILE *file = fopen(file_path, "r");
+ 		if(real_file_path) {
+ 			FILE *file = fopen(real_file_path, "r");
 
- 			char * res = read_file(file, file_path, "GET", 200);
+ 			char * res = read_file(file, real_file_path, "GET", 200);
  			write(socket, res, strlen(res));
  			fclose(file);
  			free(res);
  		}
  		else{
- 			char *file_p = append_strings(BASE_DIR, "/404.html");
- 			FILE *file = fopen(file_p, "r");
+ 			char *file_path = append_strings(BASE_DIR, "/404.html");
+ 			FILE *file = fopen(file_path, "r");
 
  			if(file != NULL) {
- 				char * res = read_file(file, file_p, "GET", 404);
+ 				char * res = read_file(file, file_path, "GET", 404);
  				write(socket, res, strlen(res));
  				fclose(file);
  				free(res);
  			}
- 			free(file_p);
  			free(file_path);
+ 			free(real_file_path);
  		}
  		free(str);
  	}	
@@ -246,29 +247,29 @@ void parse_request(int socket, char * buffer) {
  	}else {
  		char actualPath [PATH_MAX];
  		char *str = append_strings(BASE_DIR,path);
- 		char * file_path = realpath(str,actualPath);
+ 		char * real_file_path = realpath(str,actualPath);
 
- 		if(file_path) {
- 			FILE *file = fopen(file_path, "r");
+ 		if(real_file_path) {
+ 			FILE *file = fopen(real_file_path, "r");
 
- 			char * res = read_file(file, file_path, "HEAD", 200);
+ 			char * res = read_file(file, real_file_path, "HEAD", 200);
  			write(socket, res, strlen(res));
  			fclose(file);
  			free(res);
  		}
  		else{
 
- 			char *file_p = append_strings(BASE_DIR, "/404.html");
- 			FILE *file = fopen(file_p, "r");
+ 			char *file_path = append_strings(BASE_DIR, "/404.html");
+ 			FILE *file = fopen(file_path, "r");
 
  			if(file != NULL) {
- 				char * res = read_file(file, file_p, "HEAD", 404);
+ 				char * res = read_file(file, file_path, "HEAD", 404);
  				write(socket, res, strlen(res));
  				fclose(file);
  				free(res);
  			}
- 			free(file_p);
  			free(file_path);
+ 			free(real_file_path);
  		}
  		free(str);
  	}	

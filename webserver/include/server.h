@@ -14,6 +14,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <signal.h>
 
 
 #define HTTP_OK "HTTP/1.0 200 OK\n"
