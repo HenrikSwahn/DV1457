@@ -1,6 +1,5 @@
 #include "../include/server.h"
 #include "../include/error.h"
-#include <limits.h>
 
 Conf conf;
 char * default_dir;
@@ -202,20 +201,21 @@ void parse_request(int socket, char * buffer) {
  			write(socket, res, strlen(res));
  			fclose(file);
  			free(res);
- 			free(str);
  		}
  		else{
- 			char *file_path = append_strings(BASE_DIR, "/404.html");
- 			FILE *file = fopen(file_path, "r");
+ 			char *file_p = append_strings(BASE_DIR, "/404.html");
+ 			FILE *file = fopen(file_p, "r");
 
  			if(file != NULL) {
- 				char * res = read_file(file, file_path, "GET", 404);
+ 				char * res = read_file(file, file_p, "GET", 404);
  				write(socket, res, strlen(res));
  				fclose(file);
  				free(res);
  			}
+ 			free(file_p);
  			free(file_path);
  		}
+ 		free(str);
  	}	
  }
 
@@ -250,21 +250,22 @@ void parse_request(int socket, char * buffer) {
  			write(socket, res, strlen(res));
  			fclose(file);
  			free(res);
- 			free(str);
  		}
  		else{
 
- 			char *file_path = append_strings(BASE_DIR, "/404.html");
- 			FILE *file = fopen(file_path, "r");
+ 			char *file_p = append_strings(BASE_DIR, "/404.html");
+ 			FILE *file = fopen(file_p, "r");
 
  			if(file != NULL) {
- 				char * res = read_file(file, file_path, "HEAD", 404);
+ 				char * res = read_file(file, file_p, "HEAD", 404);
  				write(socket, res, strlen(res));
  				fclose(file);
  				free(res);
  			}
+ 			free(file_p);
  			free(file_path);
  		}
+ 		free(str);
  	}	
  }
 

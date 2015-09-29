@@ -12,9 +12,9 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <time.h>
-
-#define _GNU_SOURCE
 #include <stdlib.h>
+#include <limits.h>
+
 
 #define HTTP_OK "HTTP/1.0 200 OK\n"
 #define HTTP_NOT_FOUND "HTTP/1.0 404 Not Found\n"
