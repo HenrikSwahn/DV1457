@@ -4,6 +4,10 @@
 Conf conf;
 char * default_dir;
 
+void cleanup(int sig) {
+	
+}
+
 /*
  * Function that has the main server loop, it listen for 
  * new connection and adds the new sockets filedescriptor
@@ -14,6 +18,7 @@ char * default_dir;
  */
 void run_server(int lPort) {
 	
+	signal(SIGINT, cleanup);
 	struct sockaddr_in client;		
 	int server_sock;
 	int index;

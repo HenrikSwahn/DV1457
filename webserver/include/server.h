@@ -34,6 +34,7 @@ typedef struct {
 	char* concurrency;
 } Conf;
 
+void cleanup(int sig) ;
 void run_server(int lPort);
 int handle_connection(int);
 int create_server(int);

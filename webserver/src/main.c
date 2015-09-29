@@ -31,22 +31,6 @@ int readArgs(int nr, char *args[]) {
 	return port;
 }
 
-/*void cleanup(int sig) {
-
-	printf("\n\nStarting cleanup\n");
-	printf("Closing sockets\n");
-
-	shutdown(conn.client_socket, 2);
-	printf("Closed client_socket\n");
-
-	shutdown(conn.server_socket, 2);
-	printf("Closed server_socket\n");
-
-	free(conn.buffer);
-	printf("Released memory hold by buffer\n");
-	exit(0);
-}*/
-
 int main(int argc, char *argv[]) {
 
   int port = readArgs(argc, argv);
