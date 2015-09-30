@@ -150,16 +150,20 @@ void parse_request(int socket, char * buffer) {
 
 		if(strcmp(token, "GET") == 0) {
 			token = strtok(NULL, " ");
-			if(strstr(token, "/") != NULL) {
-				get_req(token, socket);
-				break;
+			if(token != NULL) {
+				if(strstr(token, "/") != NULL) {
+					get_req(token, socket);
+					break;
+				}
 			}
 		}
 		else if(strcmp(token, "HEAD") == 0) {
 			token = strtok(NULL, " ");
-			if(strstr(token, "/") != NULL) {
-				head_req(token, socket);
-				break;
+			if(token != NULL) {
+				if(strstr(token, "/") != NULL) {
+					head_req(token, socket);
+					break;
+				}
 			}
 		}
 		else {
