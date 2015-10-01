@@ -22,6 +22,52 @@ void cleanup(int sig) {
 	exit(EXIT_SUCCESS);
 }
 
+void make_daemon() {
+
+	char actual_path[PATH_MAX + 1];
+	char * full_path = realpath(conf->path, actual_path);
+	free(conf->path);
+
+	conf->path = malloc(strlen(full_path));
+	strncpy(conf->path, full_path, strlen(full_path));
+	
+	pid_t p_id = 0;
+	p_id = fork();
+
+	if(p_id < 0) {
+		exit(EXIT_FAILURE);
+	}
+
+	if(p_id > 0) {
+		exit(EXIT_SUCCESS);
+	}
+
+	umask(0);
+
+	openlog("Server" , LOG_NOWAIT | LOG_PID, LOG_USER); 
+	syslog(LOG_NOTICE, "Successfully started daemon\n");
+
+	pid_t sid;
+	sid = setsid();
+
+	if(sid < 0) {
+		syslog(LOG_ERR, "Could not create process group\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if((chdir("/")) < 0) {
+		syslog(LOG_ERR, "Could not change dir\n");
+		exit(EXIT_FAILURE);
+	}
+
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
+	open("/dev/null", O_RDWR);
+	dup(0);
+	dup(0);
+}
+
 /*
  * Function that has the main server loop, it listen for 
  * new connection and adds the new sockets filedescriptor
@@ -30,7 +76,7 @@ void cleanup(int sig) {
  * to handle the request
  * @PARAM {int lPort} Port number specified by program arguments
  */
-void run_server(int lPort) {
+void run_server(int lPort, int daemon) {
 	
 	signal(SIGINT, cleanup);
 	struct sockaddr_in client;		
@@ -40,22 +86,27 @@ void run_server(int lPort) {
 	fd_set ready_files;
 	socklen_t sock_len;
 
-	printf("%s%s\n", 
-		"__________________________________________________________________________\n",
-		"|______________Henrik_and_Andreas_webserver_is_firing up!!_______________|\n"); 
+	server_sock = create_server(lPort, daemon);
 
-	server_sock = create_server(lPort);
+	if(conf->daemon == 1) {
+		make_daemon();
+	}
       
 	if(listen(server_sock, MAXQ) < 0) {
 		_error(SLISTEN_ERROR);
 	}
 
-	printf("Server started listening on port: %d\nMain dir is: %s\nConcurrency method is set to: %s\n\n", conf->port, conf->path, conf->concurrency);
-
+	if(conf->daemon == -1) {
+		printf("%s%s\n", 
+		"__________________________________________________________________________\n",
+		"|______________Henrik_and_Andreas_webserver_is_firing up!!_______________|\n"); 
+		printf("Server started listening on port: %d\nMain dir is: %s\nConcurrency method is set to: %s\n\n", conf->port, conf->path, conf->concurrency);
+		printf("Wating for connection....\n");
+	}
+	
 	FD_ZERO (&file_set);
 	FD_SET (server_sock, &file_set);
 	
-	printf("Wating for connection....\n");
 	while(1) { 		
 
 		ready_files = file_set;
@@ -76,7 +127,11 @@ void run_server(int lPort) {
 					if(new_con < 0) {
 						_error(SACCEPT_ERROR);
 					}
-					printf("\t%s:%d connected, ", inet_ntoa(client.sin_addr), (int)ntohs(client.sin_port));
+
+					if(conf->daemon == -1) {
+						printf("\t%s:%d connected.\n", inet_ntoa(client.sin_addr), (int)ntohs(client.sin_port));
+					}
+
 					FD_SET(new_con, &file_set);
 				}
 				else { 
@@ -123,9 +178,9 @@ int handle_connection(int socket) {
  * @PARAM {int lPort} Port number specified by program arguments 
  * @RETURN return an integer with the sockets filedescriptor value 
  */
-int create_server(int lPort) {
+int create_server(int lPort, int daemon) {
 
-	conf = read_conf();
+	conf = read_conf(daemon);
 	int sock;
 	struct sockaddr_in server;
 
@@ -137,7 +192,10 @@ int create_server(int lPort) {
 	if(lPort != -1) {
 		conf->port = lPort; 
 		server.sin_port = htons(conf->port);
-		printf("Server: Got port: %d from program argument, overriding system default/config file port\n", conf->port);
+
+		if(conf->daemon == -1) {
+			printf("Server: Got port: %d from program argument, overriding system default/config file port\n", conf->port);
+		}
 	}
 	else {
 		server.sin_port = htons(conf->port);
@@ -165,7 +223,11 @@ void parse_request(int socket, char * buffer) {
 			token = strtok(NULL, " ");
 			if(token != NULL) {
 				if(strstr(token, "/") != NULL) {
-					printf("requesting: %s\n", token);
+
+					if(conf->daemon == -1) {
+						printf("\t\tRequesting: %s\n", token);
+					}
+
 					get_req(token, socket);
 					break;
 				}
@@ -175,7 +237,12 @@ void parse_request(int socket, char * buffer) {
 			token = strtok(NULL, " ");
 			if(token != NULL) {
 				if(strstr(token, "/") != NULL) {
-					printf("requesting: %s\n", token);
+
+
+					if(conf->daemon == -1) {
+						printf("\t\tRequesting: %s\n", token);
+					}
+
 					head_req(token, socket);
 					break;
 				}
@@ -201,17 +268,32 @@ void parse_request(int socket, char * buffer) {
  void get_req(char *path, int socket) {
 
  	if(strcmp(path, "/") == 0 ){
- 		char *file_path = append_strings(conf->path, "/index.html");
- 		FILE *file = fopen(file_path, "r");
+ 		char actualPath [PATH_MAX];
+ 		char * str = append_strings(conf->path , "/index.html");
+ 		char * real_file_path = realpath(str,actualPath);
 
- 		if(file != NULL) {
- 			char * res = read_file(file, file_path, "GET", 200);
+ 		if(real_file_path) {
+ 			FILE *file = fopen(real_file_path, "r");
+
+ 			char * res = read_file(file, real_file_path, "GET", 200);
  			write(socket, res, strlen(res));
  			fclose(file);
  			free(res);
  		}
+ 		else{
+ 			char *file_path = append_strings(conf->path, "/404.html");
+ 			FILE *file = fopen(file_path, "r");
 
- 		free(file_path);
+ 			if(file != NULL) {
+ 				char * res = read_file(file, file_path, "GET", 404);
+ 				write(socket, res, strlen(res));
+ 				fclose(file);
+ 				free(res);
+ 			}
+ 			free(file_path);
+ 			free(real_file_path);
+ 		}
+ 		free(str);
  	}else {
  		char actualPath [PATH_MAX];
  		char * str = append_strings(conf->path ,path);
@@ -250,17 +332,32 @@ void parse_request(int socket, char * buffer) {
  void head_req(char *path, int socket) {
 
  	if(strcmp(path, "/") == 0 ){
- 		char *file_path = append_strings(conf->path, "/index.html");
- 		FILE *file = fopen(file_path, "r");
+ 		char actualPath [PATH_MAX];
+ 		char *str = append_strings(conf->path, "/index.html");
+ 		char * real_file_path = realpath(str,actualPath);
 
- 		if(file != NULL) {
- 			char * res = read_file(file, file_path, "HEAD", 200);
+ 		if(real_file_path) {
+ 			FILE *file = fopen(real_file_path, "r");
+
+ 			char * res = read_file(file, real_file_path, "HEAD", 200);
  			write(socket, res, strlen(res));
  			fclose(file);
  			free(res);
  		}
+ 		else{
+ 			char *file_path = append_strings(conf->path, "/404.html");
+ 			FILE *file = fopen(file_path, "r");
 
- 		free(file_path);
+ 			if(file != NULL) {
+ 				char * res = read_file(file, file_path, "HEAD", 404);
+ 				write(socket, res, strlen(res));
+ 				fclose(file);
+ 				free(res);
+ 			}
+ 			free(file_path);
+ 			free(real_file_path);
+ 		}
+ 		free(str);
  	}else {
  		char actualPath [PATH_MAX];
  		char *str = append_strings(conf->path, path);
@@ -337,10 +434,11 @@ char * read_file(FILE *file, char *file_path, char *method, int code) {
  * @RETURN A conf variable that will be assigned
  * to the servers global conf variable
  */
-Conf * read_conf() {
+Conf * read_conf(int daemon) {
 	
 	Conf * c = malloc(sizeof(Conf));
 	c->port = -1;
+	c->daemon = daemon;
 	c->path = NULL,
 	c->concurrency = NULL;
 	FILE *file;
@@ -366,9 +464,12 @@ Conf * read_conf() {
 			c->concurrency = malloc(strlen(CONCURRENCY));
 			strncpy(c->concurrency, CONCURRENCY, strlen(CONCURRENCY));
 
-			printf("Server: No port specified, setting to system default: %d\n", PORT);
-			printf("Server: No path specified, setting to system default: %s\n", BASE_DIR);
-			printf("Server: No concurrency method specified, setting to system default: %s\n", CONCURRENCY);
+			if(c->daemon == -1) {
+				printf("Server: No port specified, setting to system default: %d\n", PORT);
+				printf("Server: No path specified, setting to system default: %s\n", BASE_DIR);
+				printf("Server: No concurrency method specified, setting to system default: %s\n", CONCURRENCY);	
+			}
+		
 			return c;
 		}
 
@@ -394,7 +495,10 @@ Conf * read_conf() {
 				c->port = parse_port(token);
 				
 				if(c->port < 1024) {
-					printf("Invalid port number found in config file, setting to system defulat: %d\n", PORT);
+
+					if(c->daemon == -1) {
+						printf("Invalid port number found in config file, setting to system defulat: %d\n", PORT);
+					}
 					c->port = PORT;
 				}
 
@@ -406,32 +510,41 @@ Conf * read_conf() {
 				token = strtok(NULL, "=");
 			}
 			else {
-				printf("Format error in config file\n%s%s%s%s%s", 
-					"Usage:\n",
-					"\tDIR={your path}\n",
-					"\tPORT={your port}\n",
-					"\tCON={Your concurrency method}\n",
-					"All are optional, if non are specified program argument or system default will be used\n");
+				if(c->daemon == -1) {
+					printf("Format error in config file\n%s%s%s%s%s", 
+						"Usage:\n",
+						"\tDIR={your path}\n",
+						"\tPORT={your port}\n",
+						"\tCON={Your concurrency method}\n",
+						"All are optional, if non are specified program argument or system default will be used\n");
+				}
 				exit(EXIT_FAILURE);
 			}	
 		}
 
 		//No port was specified in the config file
 		if(c->port == -1) {
-			printf("No port number was specified in the config file, setting to system default: %d\n", PORT);
+
+			if(!c->daemon) {
+				printf("No port number was specified in the config file, setting to system default: %d\n", PORT);
+			}
 			c->port = PORT;
 		}
 
 		//No path was specified in config, set to system default
 		if(c->path == NULL) {
-			printf("No path was specified in the config, setting to system defualt: %s\n", BASE_DIR);
+			if(c->daemon == -1) {
+				printf("No path was specified in the config, setting to system defualt: %s\n", BASE_DIR);
+			}
 			c->path = malloc(strlen(BASE_DIR));
 			strncpy(c->path, BASE_DIR, strlen(BASE_DIR));
 		}
 
 		//No concurrency method was specified in the config file
 		if(c->concurrency == NULL) {
-			printf("No concurrency method was specified in the config file, setting to system default: %s\n", CONCURRENCY);
+			if(c->daemon == -1) {
+				printf("No concurrency method was specified in the config file, setting to system default: %s\n", CONCURRENCY);
+			}
 			c->concurrency = malloc(strlen(CONCURRENCY));
 			strncpy(c->concurrency, CONCURRENCY, strlen(CONCURRENCY));
 		}

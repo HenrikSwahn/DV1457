@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <signal.h>
+#include <fcntl.h>
+#include <syslog.h>
 
 
 #define HTTP_OK "HTTP/1.0 200 OK\n"
@@ -32,19 +34,21 @@
 
 typedef struct {
 	uint16_t port;
+	int daemon;
 	char* path;
 	char* concurrency;
 } Conf;
 
-void cleanup(int sig) ;
-void run_server(int lPort);
+void cleanup(int sig);
+void make_daemon();
+void run_server(int, int);
 int handle_connection(int);
-int create_server(int);
+int create_server(int, int);
 void parse_request(int, char*);
 void get_req(char *, int);
 void head_req(char *, int);
 char * read_file(FILE*, char *, char *, int);
-Conf * read_conf();
+Conf * read_conf(int);
 int parse_port(char *);
 char * parse_dir(char *);
 char * parse_concurrency(char *);
