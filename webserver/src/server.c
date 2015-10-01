@@ -1,11 +1,25 @@
 #include "../include/server.h"
 #include "../include/error.h"
 
-Conf conf;
+Conf * conf;
 char * default_dir;
 
 void cleanup(int sig) {
 
+	printf("\nCleaning up...\n");
+	printf("Releasing:\n");
+	
+	printf("\t%s, in %p\n", conf->path, conf->path);
+	free(conf->path);
+	
+	printf("\t%s, in %p\n", conf->concurrency, conf->concurrency);
+	free(conf->concurrency);
+
+	printf("\tConf struct, in %p\n", conf);
+	free(conf);
+
+	printf("Shuting down, bye\n");
+	exit(EXIT_SUCCESS);
 }
 
 /*
@@ -18,7 +32,7 @@ void cleanup(int sig) {
  */
 void run_server(int lPort) {
 	
-	//signal(SIGINT, cleanup);
+	signal(SIGINT, cleanup);
 	struct sockaddr_in client;		
 	int server_sock;
 	int index;
@@ -26,17 +40,22 @@ void run_server(int lPort) {
 	fd_set ready_files;
 	socklen_t sock_len;
 
+	printf("%s%s\n", 
+		"__________________________________________________________________________\n",
+		"|______________Henrik_and_Andreas_webserver_is_firing up!!_______________|\n"); 
+
 	server_sock = create_server(lPort);
       
 	if(listen(server_sock, MAXQ) < 0) {
 		_error(SLISTEN_ERROR);
 	}
 
-	printf("Server started on listening on port: %d\nMain dir is: %s\nConcurrency method is set to: %s\n", conf.port, conf.path, conf.concurrency);
+	printf("Server started listening on port: %d\nMain dir is: %s\nConcurrency method is set to: %s\n\n", conf->port, conf->path, conf->concurrency);
 
 	FD_ZERO (&file_set);
 	FD_SET (server_sock, &file_set);
 	
+	printf("Wating for connection....\n");
 	while(1) { 		
 
 		ready_files = file_set;
@@ -57,19 +76,11 @@ void run_server(int lPort) {
 					if(new_con < 0) {
 						_error(SACCEPT_ERROR);
 					}
-
-					fprintf(
-						stderr, 
-						"ip: %s, port: %d connected\n",
-						inet_ntoa(client.sin_addr), 
-						(int)ntohs(client.sin_port)
-					);
-
+					printf("\t%s:%d connected, ", inet_ntoa(client.sin_addr), (int)ntohs(client.sin_port));
 					FD_SET(new_con, &file_set);
 				}
 				else { 
 					if(handle_connection(index)) {
-						puts("CLOSED");
 						close(index);
 						FD_CLR(index, &file_set);
 					}
@@ -88,17 +99,19 @@ void run_server(int lPort) {
  */
 int handle_connection(int socket) {
 	
-	char buffer[512];
+	char * buffer = malloc(1024);
 	int ret;
 	
-	ret = read(socket, buffer, 512);
+	ret = read(socket, buffer, 1024);
 	
 	if(ret < 0) {
+		free(buffer);
 		perror("read error");
 		exit(EXIT_FAILURE);
 	}	
 	else {
 		parse_request(socket, buffer);
+		free(buffer);
 		return 1;	
 	}
 }
@@ -122,12 +135,12 @@ int create_server(int lPort) {
 
 	server.sin_family = AF_INET;
 	if(lPort != -1) {
-		conf.port = lPort; 
-		server.sin_port = htons(conf.port);
-		printf("Server: Got port: %d from program argument, overriding system default/config file port\n", conf.port);
+		conf->port = lPort; 
+		server.sin_port = htons(conf->port);
+		printf("Server: Got port: %d from program argument, overriding system default/config file port\n", conf->port);
 	}
 	else {
-		server.sin_port = htons(conf.port);
+		server.sin_port = htons(conf->port);
 	}
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
 	
@@ -152,6 +165,7 @@ void parse_request(int socket, char * buffer) {
 			token = strtok(NULL, " ");
 			if(token != NULL) {
 				if(strstr(token, "/") != NULL) {
+					printf("requesting: %s\n", token);
 					get_req(token, socket);
 					break;
 				}
@@ -161,6 +175,7 @@ void parse_request(int socket, char * buffer) {
 			token = strtok(NULL, " ");
 			if(token != NULL) {
 				if(strstr(token, "/") != NULL) {
+					printf("requesting: %s\n", token);
 					head_req(token, socket);
 					break;
 				}
@@ -186,7 +201,7 @@ void parse_request(int socket, char * buffer) {
  void get_req(char *path, int socket) {
 
  	if(strcmp(path, "/") == 0 ){
- 		char *file_path = append_strings(BASE_DIR, "/index.html");
+ 		char *file_path = append_strings(conf->path, "/index.html");
  		FILE *file = fopen(file_path, "r");
 
  		if(file != NULL) {
@@ -199,7 +214,7 @@ void parse_request(int socket, char * buffer) {
  		free(file_path);
  	}else {
  		char actualPath [PATH_MAX];
- 		char *str = append_strings(BASE_DIR,path);
+ 		char * str = append_strings(conf->path ,path);
  		char * real_file_path = realpath(str,actualPath);
 
  		if(real_file_path) {
@@ -211,7 +226,7 @@ void parse_request(int socket, char * buffer) {
  			free(res);
  		}
  		else{
- 			char *file_path = append_strings(BASE_DIR, "/404.html");
+ 			char *file_path = append_strings(conf->path, "/404.html");
  			FILE *file = fopen(file_path, "r");
 
  			if(file != NULL) {
@@ -223,7 +238,7 @@ void parse_request(int socket, char * buffer) {
  			free(file_path);
  			free(real_file_path);
  		}
- 		free(str);
+ 		free(str);	
  	}	
  }
 
@@ -235,7 +250,7 @@ void parse_request(int socket, char * buffer) {
  void head_req(char *path, int socket) {
 
  	if(strcmp(path, "/") == 0 ){
- 		char *file_path = append_strings(BASE_DIR, "/index.html");
+ 		char *file_path = append_strings(conf->path, "/index.html");
  		FILE *file = fopen(file_path, "r");
 
  		if(file != NULL) {
@@ -248,7 +263,7 @@ void parse_request(int socket, char * buffer) {
  		free(file_path);
  	}else {
  		char actualPath [PATH_MAX];
- 		char *str = append_strings(BASE_DIR,path);
+ 		char *str = append_strings(conf->path, path);
  		char * real_file_path = realpath(str,actualPath);
 
  		if(real_file_path) {
@@ -261,7 +276,7 @@ void parse_request(int socket, char * buffer) {
  		}
  		else{
 
- 			char *file_path = append_strings(BASE_DIR, "/404.html");
+ 			char *file_path = append_strings(conf->path, "/404.html");
  			FILE *file = fopen(file_path, "r");
 
  			if(file != NULL) {
@@ -322,12 +337,12 @@ char * read_file(FILE *file, char *file_path, char *method, int code) {
  * @RETURN A conf variable that will be assigned
  * to the servers global conf variable
  */
-Conf read_conf() {
+Conf * read_conf() {
 	
-	Conf c;
-	c.port = -1;
-	c.path = NULL,
-	c.concurrency = NULL;
+	Conf * c = malloc(sizeof(Conf));
+	c->port = -1;
+	c->path = NULL,
+	c->concurrency = NULL;
 	FILE *file;
 	char *buff;
 	size_t file_size = 0;
@@ -344,9 +359,13 @@ Conf read_conf() {
 
 		if(file_size == 0) {
 			fclose(file);
-			c.port = PORT;
-			c.path = BASE_DIR;
-			c.concurrency = CONCURRENCY;
+
+			c->port = PORT;
+			c->path = malloc(strlen(BASE_DIR));
+			strncpy(c->path, BASE_DIR, strlen(BASE_DIR));
+			c->concurrency = malloc(strlen(CONCURRENCY));
+			strncpy(c->concurrency, CONCURRENCY, strlen(CONCURRENCY));
+
 			printf("Server: No port specified, setting to system default: %d\n", PORT);
 			printf("Server: No path specified, setting to system default: %s\n", BASE_DIR);
 			printf("Server: No concurrency method specified, setting to system default: %s\n", CONCURRENCY);
@@ -367,23 +386,23 @@ Conf read_conf() {
 
 			if(strcmp(token, "DIR") == 0) {
 				token = strtok(NULL, "\n");
-				c.path = parse_dir(token);
+				c->path = parse_dir(token);
 				token = strtok(NULL, "=");
 			}
 			else if(strcmp(token, "PORT") == 0) {
 				token = strtok(NULL, "\n");
-				c.port = parse_port(token);
+				c->port = parse_port(token);
 				
-				if(c.port < 1024) {
+				if(c->port < 1024) {
 					printf("Invalid port number found in config file, setting to system defulat: %d\n", PORT);
-					c.port = PORT;
+					c->port = PORT;
 				}
 
 				token = strtok(NULL, "=");
 			}
 			else if(strcmp(token, "CON") == 0) {
 				token = strtok(NULL, "\n");
-				c.concurrency = token;
+				c->concurrency = parse_concurrency(token);
 				token = strtok(NULL, "=");
 			}
 			else {
@@ -398,21 +417,23 @@ Conf read_conf() {
 		}
 
 		//No port was specified in the config file
-		if(c.port == -1) {
+		if(c->port == -1) {
 			printf("No port number was specified in the config file, setting to system default: %d\n", PORT);
-			c.port = PORT;
+			c->port = PORT;
 		}
 
 		//No path was specified in config, set to system default
-		if(c.path == NULL) {
+		if(c->path == NULL) {
 			printf("No path was specified in the config, setting to system defualt: %s\n", BASE_DIR);
-			c.path = BASE_DIR;
+			c->path = malloc(strlen(BASE_DIR));
+			strncpy(c->path, BASE_DIR, strlen(BASE_DIR));
 		}
 
 		//No concurrency method was specified in the config file
-		if(c.concurrency == NULL) {
+		if(c->concurrency == NULL) {
 			printf("No concurrency method was specified in the config file, setting to system default: %s\n", CONCURRENCY);
-			c.concurrency = CONCURRENCY;
+			c->concurrency = malloc(strlen(CONCURRENCY));
+			strncpy(c->concurrency, CONCURRENCY, strlen(CONCURRENCY));
 		}
 
 		free(buff);
@@ -427,26 +448,44 @@ Conf read_conf() {
 /*
  * A helper function to the parsing of the conf file
  * I looks for a number in a string and returns what it found
- * @PARAM {char arr[]} The string that holds the port number
+ * @PARAM {char * str} The string that holds the port number
  * @RETRUN The found port number
  */
-int parse_port(char *arr) {
+int parse_port(char *str) {
 	
 	int port = -1;
-	sscanf(arr, "%d", &port);
+	sscanf(str, "%d", &port);
 	return port;
 }
 
 /*
  * A helper function to the parsing of the conf file
  * I looks for a path in a string and returns what it found
- * @PARAM {char arr[]} The string that holds the path
+ * @PARAM {char * str} The string that holds the path
  * @RETRUN The found path
  */
-char* parse_dir(char *arr) {
+char * parse_dir(char *str) {
 
-	if(arr != NULL) {
-		return arr;
+	if(str != NULL) {
+		char * r = malloc(strlen(str));
+		strcpy(r, str);
+		return r;
+	}
+	return NULL;
+}
+
+/*
+ * A helper function to the parsing of the conf file
+ * I looks for the concurrency in a string and returns what it found
+ * @PARAM {char * str} The string that holds the path
+ * @RETRUN The found path
+ */
+char * parse_concurrency(char *str) {
+
+	if(str != NULL) {
+		char * r = malloc(strlen(str));
+		strcpy(r, str);
+		return r;
 	}
 	return NULL;
 }
@@ -459,13 +498,13 @@ char* parse_dir(char *arr) {
  */
 char *append_strings(char *s1, char *s2) {
 
-	int s1_len = strlen(s1);
-	int s2_len = strlen(s2);
-	char *r = malloc(s1_len + s2_len + 1);
+	size_t s1_len = strlen(s1);
+	size_t s2_len = strlen(s2);
 
-	memcpy(r, s1, s1_len);
-	memcpy(r+s1_len, s2, s2_len+1);
-
+	char * r = malloc(1 + s1_len + s2_len);
+	strcpy(r, s1);
+	strcat(r, s2);
+	r[s1_len+s2_len] = '\0';
 	return r;
 }
 
