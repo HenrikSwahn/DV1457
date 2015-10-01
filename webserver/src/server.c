@@ -223,11 +223,6 @@ void parse_request(int socket, char * buffer) {
 			token = strtok(NULL, " ");
 			if(token != NULL) {
 				if(strstr(token, "/") != NULL) {
-
-					if(conf->daemon == -1) {
-						printf("\t\tRequesting: %s\n", token);
-					}
-
 					get_req(token, socket);
 					break;
 				}
@@ -237,12 +232,6 @@ void parse_request(int socket, char * buffer) {
 			token = strtok(NULL, " ");
 			if(token != NULL) {
 				if(strstr(token, "/") != NULL) {
-
-
-					if(conf->daemon == -1) {
-						printf("\t\tRequesting: %s\n", token);
-					}
-
 					head_req(token, socket);
 					break;
 				}
@@ -267,61 +256,44 @@ void parse_request(int socket, char * buffer) {
  */
  void get_req(char *path, int socket) {
 
- 	if(strcmp(path, "/") == 0 ){
- 		char actualPath [PATH_MAX];
- 		char * str = append_strings(conf->path , "/index.html");
- 		char * real_file_path = realpath(str,actualPath);
+ 	char actualPath [PATH_MAX];
+	char * str; 
+	char * real_file_path;
+	char * res;
+	FILE * file;
 
- 		if(real_file_path) {
- 			FILE *file = fopen(real_file_path, "r");
+ 	if(strcmp(path, "/") == 0) {
+ 		str = append_strings(conf->path, "/index.html");
+ 	}
+ 	else {
+ 		str = append_strings(conf->path, path); 
+ 	}
 
- 			char * res = read_file(file, real_file_path, "GET", 200);
- 			write(socket, res, strlen(res));
- 			fclose(file);
- 			free(res);
- 		}
- 		else{
- 			char *file_path = append_strings(conf->path, "/404.html");
- 			FILE *file = fopen(file_path, "r");
+ 	real_file_path = realpath(str,actualPath);
 
- 			if(file != NULL) {
- 				char * res = read_file(file, file_path, "GET", 404);
- 				write(socket, res, strlen(res));
- 				fclose(file);
- 				free(res);
- 			}
- 			free(file_path);
- 			free(real_file_path);
- 		}
+ 	if(real_file_path) {
+ 		file = fopen(real_file_path, "r");
+ 		res = read_file(file, real_file_path, "GET", 200);
+ 	}
+ 	else {
  		free(str);
- 	}else {
- 		char actualPath [PATH_MAX];
- 		char * str = append_strings(conf->path ,path);
- 		char * real_file_path = realpath(str,actualPath);
+ 		free(real_file_path);
+ 		str = append_strings(conf->path, "/404.html");
+ 		real_file_path = realpath(str, actualPath);
 
  		if(real_file_path) {
- 			FILE *file = fopen(real_file_path, "r");
-
- 			char * res = read_file(file, real_file_path, "GET", 200);
- 			write(socket, res, strlen(res));
- 			fclose(file);
- 			free(res);
+ 			file = fopen(real_file_path, "r");
+ 			res = read_file(file, real_file_path, "GET", 404);
  		}
- 		else{
- 			char *file_path = append_strings(conf->path, "/404.html");
- 			FILE *file = fopen(file_path, "r");
-
- 			if(file != NULL) {
- 				char * res = read_file(file, file_path, "GET", 404);
- 				write(socket, res, strlen(res));
- 				fclose(file);
- 				free(res);
- 			}
- 			free(file_path);
+ 		else {
  			free(real_file_path);
  		}
- 		free(str);	
- 	}	
+ 	}
+
+ 	write(socket, res, strlen(res));
+ 	fclose(file);
+ 	free(res);
+ 	free(str);
  }
 
 /*
@@ -331,62 +303,44 @@ void parse_request(int socket, char * buffer) {
  */
  void head_req(char *path, int socket) {
 
- 	if(strcmp(path, "/") == 0 ){
- 		char actualPath [PATH_MAX];
- 		char *str = append_strings(conf->path, "/index.html");
- 		char * real_file_path = realpath(str,actualPath);
+ 	char actualPath [PATH_MAX];
+	char * str; 
+	char * real_file_path;
+	char * res;
+	FILE * file;
+
+ 	if(strcmp(path, "/") == 0) {
+ 		str = append_strings(conf->path, "/index.html");
+ 	}
+ 	else {
+ 		str = append_strings(conf->path, path); 
+ 	}
+
+ 	real_file_path = realpath(str,actualPath);
+
+ 	if(real_file_path) {
+ 		file = fopen(real_file_path, "r");
+ 		res = read_file(file, real_file_path, "HEAD", 200);
+ 	}
+ 	else {
+ 		free(str);
+ 		free(real_file_path);
+ 		str = append_strings(conf->path, "/404.html");
+ 		real_file_path = realpath(str, actualPath);
 
  		if(real_file_path) {
- 			FILE *file = fopen(real_file_path, "r");
-
- 			char * res = read_file(file, real_file_path, "HEAD", 200);
- 			write(socket, res, strlen(res));
- 			fclose(file);
- 			free(res);
+ 			file = fopen(real_file_path, "r");
+ 			res = read_file(file, real_file_path, "HEAD", 404);
  		}
- 		else{
- 			char *file_path = append_strings(conf->path, "/404.html");
- 			FILE *file = fopen(file_path, "r");
-
- 			if(file != NULL) {
- 				char * res = read_file(file, file_path, "HEAD", 404);
- 				write(socket, res, strlen(res));
- 				fclose(file);
- 				free(res);
- 			}
- 			free(file_path);
+ 		else {
  			free(real_file_path);
  		}
- 		free(str);
- 	}else {
- 		char actualPath [PATH_MAX];
- 		char *str = append_strings(conf->path, path);
- 		char * real_file_path = realpath(str,actualPath);
+ 	}
 
- 		if(real_file_path) {
- 			FILE *file = fopen(real_file_path, "r");
-
- 			char * res = read_file(file, real_file_path, "HEAD", 200);
- 			write(socket, res, strlen(res));
- 			fclose(file);
- 			free(res);
- 		}
- 		else{
-
- 			char *file_path = append_strings(conf->path, "/404.html");
- 			FILE *file = fopen(file_path, "r");
-
- 			if(file != NULL) {
- 				char * res = read_file(file, file_path, "HEAD", 404);
- 				write(socket, res, strlen(res));
- 				fclose(file);
- 				free(res);
- 			}
- 			free(file_path);
- 			free(real_file_path);
- 		}
- 		free(str);
- 	}	
+ 	write(socket, res, strlen(res));
+ 	fclose(file);
+ 	free(res);
+ 	free(str);	
  }
 
 /*
