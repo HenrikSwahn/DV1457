@@ -17,7 +17,7 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <syslog.h>
-
+#include <signal.h>
 
 #define HTTP_OK "HTTP/1.0 200 OK\n"
 #define HTTP_NOT_FOUND "HTTP/1.0 404 Not Found\n"

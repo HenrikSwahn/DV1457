@@ -4,6 +4,9 @@
 Conf * conf;
 char * default_dir;
 
+//For ignoring signals, used when creating daemon
+struct sigaction sa;
+
 void cleanup(int sig) {
 
 	printf("\nCleaning up...\n");
@@ -42,18 +45,35 @@ void make_daemon() {
 		exit(EXIT_SUCCESS);
 	}
 
+	pid_t sid;
+	sid = setsid();
+	if(sid < 0) {
+	  syslog(LOG_ERR, "Could not create process group\n");
+	  exit(EXIT_FAILURE);
+	}
+
+	sa.sa_handler = SIG_IGN;
+	sigemptyset (&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(SIGHUP, &sa ,NULL);
+
+	p_id = fork();
+	if(p_id < 0){
+	  printf("Failed to make second fork");
+	  exit(EXIT_FAILURE);
+	}
+	if(p_id > 0){
+	  printf("Daemon has process id: %d", p_id);
+	  exit(EXIT_SUCCESS);
+	}
+	
 	umask(0);
 
 	openlog("Server" , LOG_NOWAIT | LOG_PID, LOG_USER); 
 	syslog(LOG_NOTICE, "Successfully started daemon\n");
 
-	pid_t sid;
-	sid = setsid();
 
-	if(sid < 0) {
-		syslog(LOG_ERR, "Could not create process group\n");
-		exit(EXIT_FAILURE);
-	}
+    
 
 	if((chdir("/")) < 0) {
 		syslog(LOG_ERR, "Could not change dir\n");
