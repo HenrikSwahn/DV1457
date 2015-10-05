@@ -116,13 +116,11 @@ void run_server(int lPort, int daemon) {
 		_error(SLISTEN_ERROR);
 	}
 
-	if(conf->daemon == -1) {
-		printf("%s%s\n", 
-		"__________________________________________________________________________\n",
-		"|______________Henrik_and_Andreas_webserver_is_firing up!!_______________|\n"); 
-		printf("Server started listening on port: %d\nMain dir is: %s\nConcurrency method is set to: %s\n\n", conf->port, conf->path, conf->concurrency);
-		printf("Wating for connection....\n");
-	}
+	printf("%s%s\n", 
+	"__________________________________________________________________________\n",
+	"|______________Henrik_and_Andreas_webserver_is_firing up!!_______________|\n"); 
+	printf("Server started listening on port: %d\nMain dir is: %s\nConcurrency method is set to: %s\n\n", conf->port, conf->path, conf->concurrency);
+	printf("Wating for connection....\n");
 	syslog(LOG_NOTICE, "Server started on port: %d\n", conf->port);
 	syslog(LOG_NOTICE, "Main dir is: %s\n", conf->path);
 	syslog(LOG_NOTICE, "Concurrency is set to: %s\n", conf->concurrency);
@@ -151,9 +149,8 @@ void run_server(int lPort, int daemon) {
 						_error(SACCEPT_ERROR);
 					}
 
-					if(conf->daemon == -1) {
-						printf("\t%s:%d connected.\n", inet_ntoa(client.sin_addr), (int)ntohs(client.sin_port));
-					}
+					
+					printf("\t%s:%d connected.\n", inet_ntoa(client.sin_addr), (int)ntohs(client.sin_port));	
 					syslog(LOG_NOTICE, "%s:%d connected.\n", inet_ntoa(client.sin_addr), (int)ntohs(client.sin_port));
 
 					FD_SET(new_con, &file_set);
@@ -217,10 +214,7 @@ int create_server(int lPort, int daemon) {
 	if(lPort != -1) {
 		conf->port = lPort; 
 		server.sin_port = htons(conf->port);
-
-		if(conf->daemon == -1) {
-			printf("Server: Got port: %d from program argument, overriding system default/config file port\n", conf->port);
-		}
+		printf("Server: Got port: %d from program argument, overriding system default/config file port\n", conf->port);
 		syslog(LOG_ERR, "Got port: %d from program argument, overriding system default/config file port\n", conf->port);
 	}
 	else {
@@ -444,11 +438,9 @@ Conf * read_conf(int daemon) {
 			c->concurrency = malloc(strlen(CONCURRENCY));
 			strncpy(c->concurrency, CONCURRENCY, strlen(CONCURRENCY));
 
-			if(c->daemon == -1) {
-				printf("Server: No port specified, setting to system default: %d\n", PORT);
-				printf("Server: No path specified, setting to system default: %s\n", BASE_DIR);
-				printf("Server: No concurrency method specified, setting to system default: %s\n", CONCURRENCY);	
-			}
+			printf("Server: No port specified, setting to system default: %d\n", PORT);
+			printf("Server: No path specified, setting to system default: %s\n", BASE_DIR);
+			printf("Server: No concurrency method specified, setting to system default: %s\n", CONCURRENCY);	
 			syslog(LOG_NOTICE, "Server: No port specified, setting to system default: %d\n", PORT);
 			syslog(LOG_NOTICE, "Server: No path specified, setting to system default: %s\n", BASE_DIR);
 			syslog(LOG_NOTICE, "Server: No concurrency method specified, setting to system default: %s\n", CONCURRENCY);
@@ -478,11 +470,8 @@ Conf * read_conf(int daemon) {
 				c->port = parse_port(token);
 				
 				if(c->port < 1024) {
-
-					if(c->daemon == -1) {
-						printf("Invalid port number found in config file, setting to system defulat: %d\n", PORT);
-						syslog(LOG_NOTICE, "Invalid port number found in config file, setting to system defulat: %d\n", PORT);
-					}
+					printf("Invalid port number found in config file, setting to system defulat: %d\n", PORT);
+					syslog(LOG_NOTICE, "Invalid port number found in config file, setting to system defulat: %d\n", PORT);
 					c->port = PORT;
 				}
 
@@ -494,33 +483,26 @@ Conf * read_conf(int daemon) {
 				token = strtok(NULL, "=");
 			}
 			else {
-				if(c->daemon == -1) {
-					printf("Format error in config file\n%s%s%s%s%s", 
-						"Usage:\n",
-						"\tDIR={your path}\n",
-						"\tPORT={your port}\n",
-						"\tCON={Your concurrency method}\n",
-						"All are optional, if non are specified program argument or system default will be used\n");
-				}
+				printf("Format error in config file\n%s%s%s%s%s", 
+					"Usage:\n",
+					"\tDIR={your path}\n",
+					"\tPORT={your port}\n",
+					"\tCON={Your concurrency method}\n",
+					"All are optional, if non are specified program argument or system default will be used\n");
 				exit(EXIT_FAILURE);
 			}	
 		}
 
 		//No port was specified in the config file
 		if(c->port == -1) {
-
-			if(!c->daemon) {
-				printf("No port number was specified in the config file, setting to system default: %d\n", PORT);
-			}
+			printf("No port number was specified in the config file, setting to system default: %d\n", PORT);
 			syslog(LOG_NOTICE, "No port number was specified in the config file, setting to system default: %d\n", PORT);
 			c->port = PORT;
 		}
 
 		//No path was specified in config, set to system default
 		if(c->path == NULL) {
-			if(c->daemon == -1) {
-				printf("No path was specified in the config, setting to system defualt: %s\n", BASE_DIR);
-			}
+			printf("No path was specified in the config, setting to system defualt: %s\n", BASE_DIR);
 			syslog(LOG_NOTICE, "No path was specified in the config, setting to system defualt: %s\n", BASE_DIR);
 			c->path = malloc(strlen(BASE_DIR));
 			strncpy(c->path, BASE_DIR, strlen(BASE_DIR));
@@ -528,10 +510,8 @@ Conf * read_conf(int daemon) {
 
 		//No concurrency method was specified in the config file
 		if(c->concurrency == NULL) {
-			if(c->daemon == -1) {
-				printf("No concurrency method was specified in the config file, setting to system default: %s\n", CONCURRENCY);
-				syslog(LOG_NOTICE, "No concurrency method was specified in the config file, setting to system default: %s\n", CONCURRENCY);
-			}
+			printf("No concurrency method was specified in the config file, setting to system default: %s\n", CONCURRENCY);
+			syslog(LOG_NOTICE, "No concurrency method was specified in the config file, setting to system default: %s\n", CONCURRENCY);	
 			c->concurrency = malloc(strlen(CONCURRENCY));
 			strncpy(c->concurrency, CONCURRENCY, strlen(CONCURRENCY));
 		}
