@@ -22,6 +22,8 @@ void cleanup(int sig) {
 	free(conf);
 
 	printf("Shuting down, bye\n");
+
+	closelog();
 	exit(EXIT_SUCCESS);
 }
 
@@ -60,20 +62,17 @@ void make_daemon() {
 	p_id = fork();
 	if(p_id < 0){
 	  printf("Failed to make second fork");
+	  syslog(LOG_ERR, "Failed to make second fork");
 	  exit(EXIT_FAILURE);
 	}
 	if(p_id > 0){
 	  printf("Daemon has process id: %d", p_id);
+	  syslog(LOG_NOTICE, "Daemon has process id: %d", p_id);
 	  exit(EXIT_SUCCESS);
 	}
 	
-	umask(0);
-
-	openlog("Server" , LOG_NOWAIT | LOG_PID, LOG_USER); 
+	umask(0); 
 	syslog(LOG_NOTICE, "Successfully started daemon\n");
-
-
-    
 
 	if((chdir("/")) < 0) {
 		syslog(LOG_ERR, "Could not change dir\n");
@@ -105,6 +104,7 @@ void run_server(int lPort, int daemon) {
 	fd_set file_set;
 	fd_set ready_files;
 	socklen_t sock_len;
+	openlog("Server" , LOG_NOWAIT | LOG_PID, LOG_USER);
 
 	server_sock = create_server(lPort, daemon);
 
@@ -123,6 +123,9 @@ void run_server(int lPort, int daemon) {
 		printf("Server started listening on port: %d\nMain dir is: %s\nConcurrency method is set to: %s\n\n", conf->port, conf->path, conf->concurrency);
 		printf("Wating for connection....\n");
 	}
+	syslog(LOG_NOTICE, "Server started on port: %d\n", conf->port);
+	syslog(LOG_NOTICE, "Main dir is: %s\n", conf->path);
+	syslog(LOG_NOTICE, "Concurrency is set to: %s\n", conf->concurrency);
 	
 	FD_ZERO (&file_set);
 	FD_SET (server_sock, &file_set);
@@ -151,6 +154,7 @@ void run_server(int lPort, int daemon) {
 					if(conf->daemon == -1) {
 						printf("\t%s:%d connected.\n", inet_ntoa(client.sin_addr), (int)ntohs(client.sin_port));
 					}
+					syslog(LOG_NOTICE, "%s:%d connected.\n", inet_ntoa(client.sin_addr), (int)ntohs(client.sin_port));
 
 					FD_SET(new_con, &file_set);
 				}
@@ -182,6 +186,7 @@ int handle_connection(int socket) {
 	if(ret < 0) {
 		free(buffer);
 		perror("read error");
+		syslog(LOG_ERR, "Error reading input stream");
 		exit(EXIT_FAILURE);
 	}	
 	else {
@@ -216,6 +221,7 @@ int create_server(int lPort, int daemon) {
 		if(conf->daemon == -1) {
 			printf("Server: Got port: %d from program argument, overriding system default/config file port\n", conf->port);
 		}
+		syslog(LOG_ERR, "Got port: %d from program argument, overriding system default/config file port\n", conf->port);
 	}
 	else {
 		server.sin_port = htons(conf->port);
@@ -443,6 +449,9 @@ Conf * read_conf(int daemon) {
 				printf("Server: No path specified, setting to system default: %s\n", BASE_DIR);
 				printf("Server: No concurrency method specified, setting to system default: %s\n", CONCURRENCY);	
 			}
+			syslog(LOG_NOTICE, "Server: No port specified, setting to system default: %d\n", PORT);
+			syslog(LOG_NOTICE, "Server: No path specified, setting to system default: %s\n", BASE_DIR);
+			syslog(LOG_NOTICE, "Server: No concurrency method specified, setting to system default: %s\n", CONCURRENCY);
 		
 			return c;
 		}
@@ -472,6 +481,7 @@ Conf * read_conf(int daemon) {
 
 					if(c->daemon == -1) {
 						printf("Invalid port number found in config file, setting to system defulat: %d\n", PORT);
+						syslog(LOG_NOTICE, "Invalid port number found in config file, setting to system defulat: %d\n", PORT);
 					}
 					c->port = PORT;
 				}
@@ -502,6 +512,7 @@ Conf * read_conf(int daemon) {
 			if(!c->daemon) {
 				printf("No port number was specified in the config file, setting to system default: %d\n", PORT);
 			}
+			syslog(LOG_NOTICE, "No port number was specified in the config file, setting to system default: %d\n", PORT);
 			c->port = PORT;
 		}
 
@@ -510,6 +521,7 @@ Conf * read_conf(int daemon) {
 			if(c->daemon == -1) {
 				printf("No path was specified in the config, setting to system defualt: %s\n", BASE_DIR);
 			}
+			syslog(LOG_NOTICE, "No path was specified in the config, setting to system defualt: %s\n", BASE_DIR);
 			c->path = malloc(strlen(BASE_DIR));
 			strncpy(c->path, BASE_DIR, strlen(BASE_DIR));
 		}
@@ -518,6 +530,7 @@ Conf * read_conf(int daemon) {
 		if(c->concurrency == NULL) {
 			if(c->daemon == -1) {
 				printf("No concurrency method was specified in the config file, setting to system default: %s\n", CONCURRENCY);
+				syslog(LOG_NOTICE, "No concurrency method was specified in the config file, setting to system default: %s\n", CONCURRENCY);
 			}
 			c->concurrency = malloc(strlen(CONCURRENCY));
 			strncpy(c->concurrency, CONCURRENCY, strlen(CONCURRENCY));
@@ -528,6 +541,7 @@ Conf * read_conf(int daemon) {
 	}
 	else {
 		printf("ERROR");
+		syslog(LOG_ERR, "Error, file not found");
 	}
 	return c;
 }
