@@ -40,7 +40,7 @@ void make_daemon() {
 	p_id = fork();
 
 	if(p_id < 0) {
-		exit(EXIT_FAILURE);
+		_error(FORK_ERROR);
 	}
 
 	if(p_id > 0) {
@@ -50,8 +50,7 @@ void make_daemon() {
 	pid_t sid;
 	sid = setsid();
 	if(sid < 0) {
-	  syslog(LOG_ERR, "Could not create process group\n");
-	  exit(EXIT_FAILURE);
+	  _error(SESSION_ERROR);
 	}
 
 	sa.sa_handler = SIG_IGN;
@@ -61,9 +60,7 @@ void make_daemon() {
 
 	p_id = fork();
 	if(p_id < 0){
-	  printf("Failed to make second fork");
-	  syslog(LOG_ERR, "Failed to make second fork");
-	  exit(EXIT_FAILURE);
+	  _error(FORK_ERROR);
 	}
 	if(p_id > 0){
 	  printf("Daemon has process id: %d", p_id);
@@ -75,8 +72,7 @@ void make_daemon() {
 	syslog(LOG_NOTICE, "Successfully started daemon\n");
 
 	if((chdir("/")) < 0) {
-		syslog(LOG_ERR, "Could not change dir\n");
-		exit(EXIT_FAILURE);
+		_error(CHANGE_DIR_ERROR);
 	}
 
 	close(STDIN_FILENO);
@@ -182,9 +178,8 @@ int handle_connection(int socket) {
 	
 	if(ret < 0) {
 		free(buffer);
-		perror("read error");
-		syslog(LOG_ERR, "Error reading input stream");
-		exit(EXIT_FAILURE);
+		//syslog(LOG_ERR, "Error reading input stream");
+		_error(READ_ERROR);
 	}	
 	else {
 		parse_request(socket, buffer);
@@ -215,7 +210,7 @@ int create_server(int lPort, int daemon) {
 		conf->port = lPort; 
 		server.sin_port = htons(conf->port);
 		printf("Server: Got port: %d from program argument, overriding system default/config file port\n", conf->port);
-		syslog(LOG_ERR, "Got port: %d from program argument, overriding system default/config file port\n", conf->port);
+		syslog(LOG_NOTICE, "Got port: %d from program argument, overriding system default/config file port\n", conf->port);
 	}
 	else {
 		server.sin_port = htons(conf->port);
@@ -483,13 +478,13 @@ Conf * read_conf(int daemon) {
 				token = strtok(NULL, "=");
 			}
 			else {
-				printf("Format error in config file\n%s%s%s%s%s", 
+				/*printf("Format error in config file\n%s%s%s%s%s", 
 					"Usage:\n",
 					"\tDIR={your path}\n",
 					"\tPORT={your port}\n",
 					"\tCON={Your concurrency method}\n",
-					"All are optional, if non are specified program argument or system default will be used\n");
-				exit(EXIT_FAILURE);
+					"All are optional, if non are specified program argument or system default will be used\n");*/
+				_error(LOGFILE_FORMAT_ERROR);
 			}	
 		}
 
