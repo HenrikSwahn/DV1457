@@ -559,7 +559,7 @@ char * parse_concurrency(char *str) {
 
 	if(str != NULL) {
 		char * r = malloc(strlen(str));
-		strcnpy(r, str, strlen(str));
+		strncpy(r, str, strlen(str));
 		return r;
 	}
 	return NULL;
@@ -577,7 +577,7 @@ char * append_strings(char *s1, char *s2) {
 	size_t s2_len = strlen(s2);
 
 	char * r = malloc(1 + s1_len + s2_len);
-	strncpy(r, s1, strlen(s1));
+	strcpy(r, s1);
 	strcat(r, s2);
 	r[s1_len+s2_len] = '\0';
 	return r;

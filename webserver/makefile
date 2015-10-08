@@ -23,4 +23,4 @@ server: $(OBJECTS) $(HEADERS)
 
 clean: 
 	rm -f $(OBJ)/*.o
-	rm server 
+	rm server
