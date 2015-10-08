@@ -27,10 +27,13 @@ void cleanup(int sig) {
 	exit(EXIT_SUCCESS);
 }
 
+/*
+ * A function that is called if -d argument is sent to program
+ */
 void make_daemon() {
 
 	char actual_path[PATH_MAX + 1];
-	char * full_path = realpath(conf->path, actual_path);
+	char *full_path = realpath(conf->path, actual_path);
 	free(conf->path);
 
 	conf->path = malloc(strlen(full_path));
@@ -90,6 +93,7 @@ void make_daemon() {
  * avaiable on an exsisting connection it calls a function
  * to handle the request
  * @PARAM {int lPort} Port number specified by program arguments
+ * @PARAM {int daemon} -1 if not to run as daemon, 1 if to run as daemon
  */
 void run_server(int lPort, int daemon) {
 	
@@ -171,14 +175,13 @@ void run_server(int lPort, int daemon) {
  */
 int handle_connection(int socket) {
 	
-	char * buffer = malloc(1024);
+	char *buffer = malloc(1024);
 	int ret;
 	
 	ret = read(socket, buffer, 1024);
 	
 	if(ret < 0) {
 		free(buffer);
-		//syslog(LOG_ERR, "Error reading input stream");
 		_error(READ_ERROR);
 	}	
 	else {
@@ -192,7 +195,8 @@ int handle_connection(int socket) {
  * Helper function that creates the server. 
  * It reads a config file for server port, 
  * base dir and concurrency method.
- * @PARAM {int lPort} Port number specified by program arguments 
+ * @PARAM {int lPort} Port number specified by program arguments
+ * @PARAM {int daemon} -1 if not to run as daemon, 1 if to run as daemon
  * @RETURN return an integer with the sockets filedescriptor value 
  */
 int create_server(int lPort, int daemon) {
@@ -227,9 +231,9 @@ int create_server(int lPort, int daemon) {
  * A function that looks in the client request looking for 
  * GET or HEAD, if it cant find them it sends 501 to clients. 
  * @PARAM {int socket} server socket filedescriptor value
- * @PARAM {char * buffer} A buffer with clients request
+ * @PARAM {char *buffer} A buffer with clients request
  */
-void parse_request(int socket, char * buffer) {
+void parse_request(int socket, char *buffer) {
 	
 	char *token = strtok(buffer, " ");
 	while(token) {
@@ -272,10 +276,10 @@ void parse_request(int socket, char * buffer) {
  void get_req(char *path, int socket) {
 
  	char actualPath [PATH_MAX];
-	char * str; 
-	char * real_file_path;
-	char * res;
-	FILE * file;
+	char *str; 
+	char *real_file_path;
+	char *res;
+	FILE *file;
 
  	if(strcmp(path, "/") == 0) {
  		str = append_strings(conf->path, "/index.html");
@@ -319,10 +323,10 @@ void parse_request(int socket, char * buffer) {
  void head_req(char *path, int socket) {
 
  	char actualPath [PATH_MAX];
-	char * str; 
-	char * real_file_path;
-	char * res;
-	FILE * file;
+	char *str; 
+	char *real_file_path;
+	char *res;
+	FILE *file;
 
  	if(strcmp(path, "/") == 0) {
  		str = append_strings(conf->path, "/index.html");
@@ -363,9 +367,9 @@ void parse_request(int socket, char * buffer) {
  * builds a reponse and returns a pointer to
  * the response
  * @PARAM {FILE *file} The html page that the client has requested
- * @PARAM
- * @PARAM
- * @PARAM
+ * @PARAM {char *file_path} The path to the file to be read
+ * @PARAM {char *method} The http method to handle
+ * @PARAM {int code} The http status
  * @RETURN A pointer to the response
  */
 char * read_file(FILE *file, char *file_path, char *method, int code) {
@@ -400,12 +404,13 @@ char * read_file(FILE *file, char *file_path, char *method, int code) {
 /*
  * Reads the config file, looking for port,
  * concurrency method and path to base dir
+ * @PARAM {int daemon} -1 if not to run as daemon, 1 if to run as daemon
  * @RETURN A conf variable that will be assigned
  * to the servers global conf variable
  */
 Conf * read_conf(int daemon) {
 	
-	Conf * c = malloc(sizeof(Conf));
+	Conf *c = malloc(sizeof(Conf));
 	c->port = -1;
 	c->daemon = daemon;
 	c->path = NULL,
@@ -478,12 +483,6 @@ Conf * read_conf(int daemon) {
 				token = strtok(NULL, "=");
 			}
 			else {
-				/*printf("Format error in config file\n%s%s%s%s%s", 
-					"Usage:\n",
-					"\tDIR={your path}\n",
-					"\tPORT={your port}\n",
-					"\tCON={Your concurrency method}\n",
-					"All are optional, if non are specified program argument or system default will be used\n");*/
 				_error(LOGFILE_FORMAT_ERROR);
 			}	
 		}
@@ -544,7 +543,7 @@ char * parse_dir(char *str) {
 
 	if(str != NULL) {
 		char * r = malloc(strlen(str));
-		strcpy(r, str);
+		strncpy(r, str, strlen(str));
 		return r;
 	}
 	return NULL;
@@ -560,7 +559,7 @@ char * parse_concurrency(char *str) {
 
 	if(str != NULL) {
 		char * r = malloc(strlen(str));
-		strcpy(r, str);
+		strcnpy(r, str, strlen(str));
 		return r;
 	}
 	return NULL;
@@ -572,19 +571,26 @@ char * parse_concurrency(char *str) {
  * @PARAM {char *s2} Second string
  * @RETURN A pointer to the complete string
  */
-char *append_strings(char *s1, char *s2) {
+char * append_strings(char *s1, char *s2) {
 
 	size_t s1_len = strlen(s1);
 	size_t s2_len = strlen(s2);
 
 	char * r = malloc(1 + s1_len + s2_len);
-	strcpy(r, s1);
+	strncpy(r, s1, strlen(s1));
 	strcat(r, s2);
 	r[s1_len+s2_len] = '\0';
 	return r;
 }
 
-char *build_headers(long size, char *file_path, int code) {
+/*
+ * Function used to build the response headers
+ * @PARAM {long size} The size of the response body
+ * @PARAM {char *file_path} The filepath to file read
+ * @PARAM {int code} The status code
+ * @RETURN A pointer to the response string
+ */
+char * build_headers(long size, char *file_path, int code) {
 	
 	char *response;
 	char *cont_len;
@@ -617,7 +623,7 @@ char *build_headers(long size, char *file_path, int code) {
 
 	response = malloc(head_len + size + 1);
 
-	strcpy(response, status_code);
+	strncpy(response, status_code, strlen(status_code));
 	strcat(response, HEADER_LANG);
 	strcat(response, HEADER_CONT_TYPE);
 	strcat(response, cont_len);
@@ -630,6 +636,12 @@ char *build_headers(long size, char *file_path, int code) {
 	return response;
 }
 
+/*
+ * A function to get the last modfied for the file
+ * @PARAM {char *path} The file path to the file 
+ * that we want to check when last modfied 
+ * @RETURN A pointer to the string containing the last mod header
+ */
 char * mod_date(char *path) {
 	char date_arr[10];
 	char *d_p;
@@ -644,10 +656,15 @@ char * mod_date(char *path) {
     return date;
 }
 
-char *cont_length(long size) {
+/*
+ * A function to get the content length as a string
+ * @PARAM {long size} The size of the body 
+ * @RETURN A pointer to the string containing the content length header
+ */
+char * cont_length(long size) {
 	char body_len[10];
 	sprintf(body_len, "%ld\n", size);
 	char *b_l = body_len;
-	char * cont_len = append_strings(HEADER_CONT_LEN, b_l);
+	char *cont_len = append_strings(HEADER_CONT_LEN, b_l);
 	return cont_len;
 }
