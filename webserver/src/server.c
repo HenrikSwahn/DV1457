@@ -265,104 +265,6 @@ void parse_request(int socket, char *buffer) {
 }
 
 /*
- * Function to handle if the client made a GET request.
- * It first checks if the client want to acces /,
- * if so it sends that file if it can be found. If the client
- * want to access something els like "/index.html" the function 
- * tries to open that file, if fail returns not found to client
- * @PARAM {char *path} The path the client want to acces
- * @PARAM {int socket} server socket filedescriptor value
- */
- void get_req(char *path, int socket) {
-
- 	char actualPath [PATH_MAX];
-	char *str; 
-	char *real_file_path;
-	char *res;
-	FILE *file;
-
- 	if(strcmp(path, "/") == 0) {
- 		str = append_strings(conf->path, "/index.html");
- 	}
- 	else {
- 		str = append_strings(conf->path, path); 
- 	}
-
- 	real_file_path = realpath(str,actualPath);
-
- 	if(real_file_path) {
- 		file = fopen(real_file_path, "r");
- 		res = read_file(file, real_file_path, "GET", 200);
- 	}
- 	else {
- 		free(str);
- 		free(real_file_path);
- 		str = append_strings(conf->path, "/404.html");
- 		real_file_path = realpath(str, actualPath);
-
- 		if(real_file_path) {
- 			file = fopen(real_file_path, "r");
- 			res = read_file(file, real_file_path, "GET", 404);
- 		}
- 		else {
- 			free(real_file_path);
- 		}
- 	}
-
- 	write(socket, res, strlen(res));
- 	fclose(file);
- 	free(res);
- 	free(str);
- }
-
-/*
- * Function to handle if the client made a HEAD request.
- * @PARAM {char *path} The path the client want to acces
- * @PARAM {int socket} server socket filedescriptor value
- */
- void head_req(char *path, int socket) {
-
- 	char actualPath [PATH_MAX];
-	char *str; 
-	char *real_file_path;
-	char *res;
-	FILE *file;
-
- 	if(strcmp(path, "/") == 0) {
- 		str = append_strings(conf->path, "/index.html");
- 	}
- 	else {
- 		str = append_strings(conf->path, path); 
- 	}
-
- 	real_file_path = realpath(str,actualPath);
-
- 	if(real_file_path) {
- 		file = fopen(real_file_path, "r");
- 		res = read_file(file, real_file_path, "HEAD", 200);
- 	}
- 	else {
- 		free(str);
- 		free(real_file_path);
- 		str = append_strings(conf->path, "/404.html");
- 		real_file_path = realpath(str, actualPath);
-
- 		if(real_file_path) {
- 			file = fopen(real_file_path, "r");
- 			res = read_file(file, real_file_path, "HEAD", 404);
- 		}
- 		else {
- 			free(real_file_path);
- 		}
- 	}
-
- 	write(socket, res, strlen(res));
- 	fclose(file);
- 	free(res);
- 	free(str);	
- }
-
-/*
  * Function that read the requested html page, 
  * builds a reponse and returns a pointer to
  * the response
@@ -605,8 +507,14 @@ char * build_headers(long size, char *file_path, int code) {
 		case 200:
 			status_code = HTTP_OK;
 			break;
+		case 400:
+			status_code = HTTP_BAD_REQUEST;
+			break;
 		case 404:
 			status_code = HTTP_NOT_FOUND;
+			break;
+		case 500:
+			status_code = HTTP_INTERNAL_SERVER_ERROR;
 			break;
 		default:
 			status_code = HTTP_OK;
@@ -667,4 +575,24 @@ char * cont_length(long size) {
 	char *b_l = body_len;
 	char *cont_len = append_strings(HEADER_CONT_LEN, b_l);
 	return cont_len;
+}
+
+int check_url(char * url) {
+
+	char * i = url;
+	char prev = *i;
+	char t[] = "/.";
+
+	*i++;
+
+	while(*i) { //Loop through the charecters
+		if(strchr(t, prev) != NULL) {
+			if(*i == prev) {
+				return -1;
+			}
+		}
+		prev = *i;
+		*i++;
+	}
+	return 1;
 }

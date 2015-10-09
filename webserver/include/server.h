@@ -19,18 +19,15 @@
 #include <syslog.h>
 #include <signal.h>
 
-#define HTTP_OK "HTTP/1.0 200 OK\n"
-#define HTTP_NOT_FOUND "HTTP/1.0 404 Not Found\n"
-#define HTTP_NOT_IMPL "HTTP/1.0 501 Not Implemented\n"
-#define HEADER_CONT_TYPE "Content-Type: text/html\n"
-#define HEADER_LANG "Content-Language: en\n"
-#define HEADER_CONT_LEN "Content-Length: "
-#define HEADER_LAST_MOD "Last-Modified: "
-#define HEADER_SERV_NAME "Server: Henrik/Andreas 1.0\n"
 #define PORT 12000
 #define CONCURRENCY "MULTIPLEXING"
 #define BASE_DIR "../www"
 #define MAXQ 10000
+
+void http_200(int, char *, char *);
+void http_400(int, char *);
+void http_404(int, char *);
+void http_500(int, char *);
 
 typedef struct {
 	uint16_t port;
@@ -56,5 +53,6 @@ char * append_strings(char *s1, char *s2);
 char * build_headers(long, char *, int);
 char * cont_length(long);
 char * mod_date(char *);
+int check_url(char * url);
 
 #endif
