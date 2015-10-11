@@ -120,6 +120,38 @@ void http_400(char *conf_path, int socket, char *method) {
 	}
 	else {
 		free(real_file_path);
+		http_500(conf_path, socket, method);
+	}
+}
+
+void http_403(char *conf_path, int socket, char *method) {
+
+	char actualPath [PATH_MAX];
+	char *str; 
+	char *real_file_path;
+	char *res;
+	FILE *file;
+
+	str = append_strings(conf_path, "/403.html");
+	real_file_path = realpath(str, actualPath);
+	free(str);
+
+	if(real_file_path) {
+		file = fopen(real_file_path, "r");
+
+		if(file != NULL) {
+			res = read_file(file, real_file_path, method, 403);
+			write(socket, res, strlen(res));
+			fclose(file);
+			free(res);
+		}
+		else {
+			http_500(conf_path, socket, method);
+		}
+	}
+	else {
+		free(real_file_path);
+		http_500(conf_path, socket, method);
 	}
 }
 
@@ -149,34 +181,25 @@ void http_404(char *conf_path, int socket, char *method) {
 	}
 	else {
 		free(real_file_path);
+		http_500(conf_path, socket, method);
 	}
 }
 
 void http_500(char *conf_path, int socket, char *method) {
 
-	char actualPath [PATH_MAX];
-	char *str; 
-	char *real_file_path;
-	char *res;
-	FILE *file;
+	char * res;
+	size_t body_len = strlen("\n<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\"><html><head><title>500</title></head><body><p>500 INTERNAL SERVER ERROR</p></body></html>\n");
+	char * _500 = malloc(body_len);
+	strcpy(_500, "\n<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\"><html><head><title>500</title></head><body><p>500 INTERNAL SERVER ERROR</p></body></html>\n");
+	res = malloc(strlen(_500) + strlen(HTTP_INTERNAL_SERVER_ERROR));
 
-	str = append_strings(conf_path, "/500.html");
-	real_file_path = realpath(str, actualPath);
-	free(str);
+	strcpy(res, HTTP_INTERNAL_SERVER_ERROR);
+	strcat(res, _500);
 
-	if(real_file_path) {
-		file = fopen(real_file_path, "r");
+	write(socket, res, strlen(res));
 
-		if(file != NULL) {
-			res = read_file(file, real_file_path, method, 500);
-			write(socket, res, strlen(res));
-			fclose(file);
-			free(res);
-		}
-	}
-	else {
-		free(real_file_path);
-	}
+	free(res);
+	free(_500);
 }
 
 /*

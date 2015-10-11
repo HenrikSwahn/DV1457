@@ -11,7 +11,6 @@
 #define PORT 12000
 #define CONCURRENCY "MULTIPLEXING"
 #define BASE_DIR "../www"
-#define MAXQ 10000
 
 typedef struct {
 	uint16_t port;

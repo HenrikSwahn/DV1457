@@ -21,7 +21,7 @@ Conf * read_conf(int daemon) {
 	int c_har;
 	char *token;
 
-	file = fopen("./test.config", "rt");
+	file = fopen("./lab3-config", "rt");
 	if(file != NULL) {	
 
 		fseek(file, 0, SEEK_END);

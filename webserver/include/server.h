@@ -16,6 +16,8 @@
 #include "http.h"
 #include "conf.h"
 
+#define MAXQ 10000
+
 void cleanup(int sig);
 void make_daemon();
 void run_server(int, int);
