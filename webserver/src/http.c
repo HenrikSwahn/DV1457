@@ -27,8 +27,8 @@
 	 	else {
 	 		str = append_strings(conf_path, path); 
 	 	}
-	 	free(str);
 	 	real_file_path = realpath(str,actualPath);
+	 	free(str);
 
 	 	if(real_file_path) {
 	 		http_200(socket, real_file_path, "GET");
@@ -63,8 +63,8 @@
 	 	else {
 	 		str = append_strings(conf_path, path); 
 	 	}
-	 	free(str);
 	 	real_file_path = realpath(str,actualPath);
+	 	free(str);
 
 	 	if(real_file_path) {
 	 		http_200(socket, real_file_path, "HEAD");
