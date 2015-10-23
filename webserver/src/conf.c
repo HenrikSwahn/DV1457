@@ -97,16 +97,18 @@ Conf * read_conf(int daemon) {
 		if(c->path == NULL) {
 			printf("No path was specified in the config, setting to system defualt: %s\n", BASE_DIR);
 			syslog(LOG_NOTICE, "No path was specified in the config, setting to system defualt: %s\n", BASE_DIR);
-			c->path = malloc(strlen(BASE_DIR));
-			strncpy(c->path, BASE_DIR, strlen(BASE_DIR));
+			c->path = malloc(strlen(BASE_DIR) + 1);
+			c->path[strlen(BASE_DIR)] = '\0';
+			strcpy(c->path, BASE_DIR);
 		}
 
 		//No concurrency method was specified in the config file
 		if(c->concurrency == NULL) {
 			printf("No concurrency method was specified in the config file, setting to system default: %s\n", CONCURRENCY);
 			syslog(LOG_NOTICE, "No concurrency method was specified in the config file, setting to system default: %s\n", CONCURRENCY);	
-			c->concurrency = malloc(strlen(CONCURRENCY));
-			strncpy(c->concurrency, CONCURRENCY, strlen(CONCURRENCY));
+			c->concurrency = malloc(strlen(CONCURRENCY)+1);
+			c->concurrency[strlen(CONCURRENCY)] = '\0';
+			strcpy(c->concurrency, CONCURRENCY);
 		}
 
 		free(buff);
@@ -141,8 +143,9 @@ int parse_port(char *str) {
 char * parse_dir(char *str) {
 
 	if(str != NULL) {
-		char * r = malloc(strlen(str));
-		strncpy(r, str, strlen(str));
+		char * r = malloc(strlen(str)+1);
+		strcpy(r, str);
+		r[strlen(str)] = '\0';
 		return r;
 	}
 	return NULL;
@@ -157,8 +160,9 @@ char * parse_dir(char *str) {
 char * parse_concurrency(char *str) {
 
 	if(str != NULL) {
-		char * r = malloc(strlen(str));
-		strncpy(r, str, strlen(str));
+		char * r = malloc(strlen(str)+1);
+		strcpy(r, str);
+		r[strlen(str)] = '\0';
 		return r;
 	}
 	return NULL;

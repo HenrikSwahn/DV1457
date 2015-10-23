@@ -307,7 +307,7 @@ char * build_headers(long size, char *file_path, int code) {
  * @RETURN A pointer to the string containing the last mod header
  */
 char * mod_date(char *path) {
-	char date_arr[10];
+	char date_arr[28];
 	char *d_p;
 	char *date;
 	struct stat info;
