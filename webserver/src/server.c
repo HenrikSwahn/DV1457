@@ -200,7 +200,7 @@ int handle_connection(int socket) {
 int create_server(int lPort, int daemon) {
 
 	conf = read_conf(daemon);
-	int sock;
+	int sock, reuseaddr = 1;
 	struct sockaddr_in server;
 
 	if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -219,6 +219,7 @@ int create_server(int lPort, int daemon) {
 	}
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
 	
+        if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(int)) < 0) { printf("setsockopt"); exit(1); }
 	if(bind(sock, (struct sockaddr *) &server, sizeof(server)) < 0) {
 		_error(SBIND_ERROR);
 	}
