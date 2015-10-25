@@ -287,13 +287,14 @@ char * build_headers(long size, char *file_path, int code) {
 
 	response = malloc(head_len + size + 1);
 
-	strncpy(response, status_code, strlen(status_code));
+	strcpy(response, status_code);
 	strcat(response, HEADER_LANG);
 	strcat(response, HEADER_CONT_TYPE);
 	strcat(response, cont_len);
 	strcat(response, last_mod);
 	strcat(response, HEADER_SERV_NAME);
 	strcat(response, "\n");
+	response[head_len + size] = '\0';
 
 	free(cont_len);
 	free(last_mod);
