@@ -34,9 +34,10 @@ void make_daemon() {
 	char *full_path = realpath(conf->path, actual_path);
 	free(conf->path);
 
-	conf->path = malloc(strlen(full_path));
-	strncpy(conf->path, full_path, strlen(full_path));
-	
+	conf->path = malloc(strlen(full_path) + 1);
+	strcpy(conf->path, full_path);
+	conf->path[strlen(full_path)] = '\0';
+	printf("%s\n", conf->path);
 	pid_t p_id = 0;
 	p_id = fork();
 

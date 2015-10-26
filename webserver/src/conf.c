@@ -32,10 +32,13 @@ Conf * read_conf(int daemon) {
 			fclose(file);
 
 			c->port = PORT;
-			c->path = malloc(strlen(BASE_DIR));
-			strncpy(c->path, BASE_DIR, strlen(BASE_DIR));
-			c->concurrency = malloc(strlen(CONCURRENCY));
-			strncpy(c->concurrency, CONCURRENCY, strlen(CONCURRENCY));
+			c->path = malloc(strlen(BASE_DIR) + 1);
+			strcpy(c->path, BASE_DIR);
+			c->path[strlen(BASE_DIR)] = '\0';
+
+			c->concurrency = malloc(strlen(CONCURRENCY) + 1);
+			strcpy(c->concurrency, CONCURRENCY);
+			c->concurrency[strlen(CONCURRENCY)] = '\0';
 
 			printf("Server: No port specified, setting to system default: %d\n", PORT);
 			printf("Server: No path specified, setting to system default: %s\n", BASE_DIR);
