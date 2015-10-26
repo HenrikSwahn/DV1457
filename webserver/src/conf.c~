@@ -90,8 +90,8 @@ Conf * read_conf(int daemon) {
 		}
 
 		//No port was specified in the config file
-		if(c->port == -1 || c->port >= 60000) {
-			printf("No port number or invalid was specified in the config file, setting to system default: %d\n", PORT);
+		if(c->port == -1) {
+			printf("No port number was specified in the config file, setting to system default: %d\n", PORT);
 			syslog(LOG_NOTICE, "No port number was specified in the config file, setting to system default: %d\n", PORT);
 			c->port = PORT;
 		}
